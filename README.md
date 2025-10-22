@@ -78,6 +78,22 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
    - Sicherheit & Rechtliches
    - Dokumentation
 
+### GitHub Integration
+
+7. **.github/ISSUE_TEMPLATE/** (Zentrale Issue Templates)
+   - `bug.md` - Bug Reports
+   - `feature.md` - Feature Requests
+   - `documentation.md` - Documentation Requests
+   - `question.md` - Questions / Discussions
+
+8. **.github/PULL_REQUEST_TEMPLATE/** (Zentrale PR Templates)
+   - `default.md` - Standard PR Template mit Checklisten
+
+9. **.github/README.md**
+   - Dokumentation der GitHub Templates
+   - Best Practices für Issues und PRs
+   - Verwendung und Anpassung
+
 ---
 
 ## Verwendung in Projekten
@@ -92,14 +108,53 @@ Dann sind alle Templates verfügbar unter `.templates/`:
 
 ```
 .templates/
-├── README.md                      # Diese Datei
-├── technische_vorgaben.md         # Technische Standards
-├── ux-vorgaben.md                 # UX/Design Standards
-├── design-system.md               # Komponenten-Katalog
-├── accessibility-guidelines.md    # WCAG 2.1 AA Guidelines
-├── testing-standards.md           # Testing Best Practices
-└── PUBLISHING_CHECKLIST.md        # Publishing Checklist
+├── README.md                           # Diese Datei
+├── technische_vorgaben.md              # Technische Standards
+├── ux-vorgaben.md                      # UX/Design Standards
+├── design-system.md                    # Komponenten-Katalog
+├── accessibility-guidelines.md         # WCAG 2.1 AA Guidelines
+├── testing-standards.md                # Testing Best Practices
+├── PUBLISHING_CHECKLIST.md             # Publishing Checklist
+│
+└── .github/
+    ├── README.md                       # GitHub Templates Dokumentation
+    ├── ISSUE_TEMPLATE/
+    │   ├── bug.md                      # Bug Report Template
+    │   ├── feature.md                  # Feature Request Template
+    │   ├── documentation.md            # Documentation Request Template
+    │   └── question.md                 # Question / Discussion Template
+    │
+    └── PULL_REQUEST_TEMPLATE/
+        └── default.md                  # Standard PR Template
 ```
+
+## Verwendung der GitHub Templates
+
+Die `.github` Templates können auf verschiedene Weisen in dein Projekt übernommen werden:
+
+### Option 1: Kopieren (Einfach)
+```bash
+# Kopiere die .github Verzeichnisse ins Projekt
+cp -r .templates/.github .
+```
+
+### Option 2: Symlink (Aktualisierbar, nur macOS/Linux)
+```bash
+# Erstelle Symlinks zu den Templates
+ln -s .templates/.github/ISSUE_TEMPLATE .github/ISSUE_TEMPLATE
+ln -s .templates/.github/PULL_REQUEST_TEMPLATE .github/PULL_REQUEST_TEMPLATE
+```
+
+### Option 3: Anpassung (Empfohlen)
+```bash
+# Kopiere Templates als Basis
+cp -r .templates/.github .
+
+# Bearbeite für dein Projekt (z.B. projekt-spezifische Checklisten)
+vim .github/PULL_REQUEST_TEMPLATE/default.md
+```
+
+**Siehe auch:** [.github/README.md](.github/README.md) für Dokumentation und Best Practices
 
 ---
 
@@ -163,17 +218,27 @@ Diese Templates sind absichtlich **projektübergreifend generalisiert**:
 
 ## Aktualisierungshistorie
 
-### Version 2.0 (Überarbeitet)
-- ✅ technische_vorgaben.md komplett überarbeitet (alt: obsolet)
-- ✅ ux-vorgaben.md massiv erweitert (alt: zu oberflächlich)
-- ✅ design-system.md neu (alt: fehlte)
-- ✅ accessibility-guidelines.md neu (alt: fehlte)
-- ✅ testing-standards.md neu (alt: fehlte)
-- ✅ PUBLISHING_CHECKLIST.md aktuell (neu: basierend auf Eisenhauer)
+### Version 2.1 (GitHub Integration)
+- ✅ `.github/ISSUE_TEMPLATE/` mit 4 Template-Typen
+  - bug.md - Bug Reports
+  - feature.md - Feature Requests
+  - documentation.md - Documentation Requests
+  - question.md - Questions / Discussions
+- ✅ `.github/PULL_REQUEST_TEMPLATE/` mit Standard PR Template
+- ✅ `.github/README.md` - Dokumentation der GitHub Templates
+- ✅ Hauptquellen-README aktualisiert
 
-### Alte Version (1.0)
+### Version 2.0 (Überarbeitet)
+- ✅ technische_vorgaben.md komplett überarbeitet
+- ✅ ux-vorgaben.md massiv erweitert
+- ✅ design-system.md neu
+- ✅ accessibility-guidelines.md neu
+- ✅ testing-standards.md neu
+- ✅ PUBLISHING_CHECKLIST.md aktuell
+
+### Version 1.0 (Alte Version)
 - Zu minimalistisch und projekt-spezifisch
 - Jest statt Vitest
 - Unvollständige Accessibility Richtlinien
-- Fehlende Design System Dokumentation
+- Fehlende Design System & GitHub Templates Dokumentation
 
