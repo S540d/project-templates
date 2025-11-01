@@ -353,6 +353,452 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 
 **Betroffene Projekte:** Energy Price Germany, 1x1 Trainer, Eisenhauer, Pflanzkalender
 
+**Design Token Spezifikation - Settings Menu:**
+
+Die folgenden Design-Token MÜSSEN in jedem Projekt verwendet werden für einheitliches Aussehen:
+
+```css
+/* Colors */
+--settings-bg: #ffffff (light) / #1f2937 (dark)
+--settings-text: #111827 (light) / #f3f4f6 (dark)
+--settings-text-secondary: #6b7280 (light) / #9ca3af (dark)
+--settings-border: #e5e7eb (light) / #374151 (dark)
+--settings-primary: #667eea (primary color)
+--settings-button-bg: #f5f5f5 (light) / #374151 (dark)
+--settings-button-active: #667eea
+--settings-button-active-text: #ffffff
+
+/* Typography */
+--settings-title-size: 18px
+--settings-title-weight: 600
+--settings-section-title-size: 12px
+--settings-section-title-weight: 600
+--settings-section-title-case: uppercase
+--settings-section-title-letter-spacing: 0.5px
+--settings-link-size: 14px
+--settings-link-weight: 500
+
+/* Spacing */
+--settings-modal-padding: 16px
+--settings-section-padding: 12px vertical, 16px horizontal
+--settings-gap: 8px
+--settings-separator-margin: 0
+
+/* Sizing */
+--settings-button-padding: 10px vertical, 12px horizontal
+--settings-button-height: 40px
+--settings-button-border-radius: 6px
+--settings-modal-width: max 512px
+--settings-modal-border-radius: 12px
+--settings-separator-height: 1px
+
+/* Interactions */
+--settings-button-hover-opacity: 0.8
+--settings-link-hover-opacity: 0.8
+--settings-transition-duration: 200ms
+--settings-touch-target-min: 44px
+```
+
+**Visuelle Struktur (Mobile & Desktop):**
+
+```
+┌─────────────────────────────────┐
+│ Settings                    ×   │  <- Header (18px title, close button 44x44px min)
+├─────────────────────────────────┤
+│                                 │
+│ APPEARANCE                      │  <- Section Title (12px uppercase)
+│ [Light] [Dark] [System]        │  <- Theme Buttons (3x flex, 40px height)
+│                                 │  <- Padding: 12px v, 16px h
+├─────────────────────────────────┤  <- Separator (1px)
+│                                 │
+│ Send Feedback          →        │  <- Link (14px, primary color)
+│                                 │  <- Touch target: 44px+
+├─────────────────────────────────┤
+│                                 │
+│ ABOUT                           │
+│ Version 1.0.0                   │
+│                                 │
+├─────────────────────────────────┤
+│                                 │
+│ Buy Me a Coffee        →        │
+│                                 │
+└─────────────────────────────────┘
+```
+
+**Detaillierte Spezifikation pro Element:**
+
+1. **Modal Container:**
+   - Width: 90vw, max 512px (mobile), max 600px (desktop)
+   - Padding: 16px (mobile), 24px (desktop)
+   - Border Radius: 12px
+   - Background: --settings-bg
+   - Box Shadow: 0 4px 12px rgba(0, 0, 0, 0.15)
+   - Position: Centered, above content layer (z-index: 1000+)
+
+2. **Header:**
+   - Display: flex, space-between, center
+   - Height: auto (min 44px for close button)
+   - Border-bottom: 1px solid --settings-border
+   - Padding-bottom: 12px
+   - Title: 18px, 600 weight, --settings-text
+   - Close Button (×):
+     - Size: 24px font
+     - Min touch: 44x44px
+     - Background: transparent
+     - Hover: opacity 0.7
+     - Cursor: pointer
+
+3. **Section Container:**
+   - Padding: 12px vertical, 16px horizontal
+   - Margin: 0
+   - Display: block
+
+4. **Section Title (APPEARANCE, ABOUT):**
+   - Font Size: 12px
+   - Font Weight: 600
+   - Text Transform: uppercase
+   - Letter Spacing: 0.5px
+   - Color: --settings-text-secondary
+   - Margin-bottom: 12px
+   - Margin: 0
+   - Text alignment: left
+
+5. **Theme Toggle Container:**
+   - Display: flex
+   - Gap: 8px
+   - Height: 40px
+
+6. **Theme Buttons (Light, Dark, System):**
+   - Flex: 1 (equal width)
+   - Height: 40px
+   - Padding: 10px vertical, 12px horizontal
+   - Border: none
+   - Border Radius: 6px
+   - Font Size: 12-13px
+   - Font Weight: 600
+   - Cursor: pointer
+   - Transition: all 200ms ease
+   - Default State:
+     - Background: --settings-button-bg
+     - Color: --settings-text
+   - Active State:
+     - Background: --settings-button-active
+     - Color: --settings-button-active-text
+   - Hover State:
+     - Opacity: 0.8
+   - Focus State:
+     - Outline: 2px solid --settings-primary
+     - Outline-offset: 2px
+
+7. **Separator (hr):**
+   - Height: 1px
+   - Background: --settings-border
+   - Margin: 0
+   - Border: none
+   - Padding: 0
+
+8. **Links (Send Feedback, Buy Me a Coffee):**
+   - Display: block
+   - Font Size: 14px
+   - Font Weight: 500
+   - Color: --settings-primary
+   - Text Decoration: none
+   - Padding: 12px vertical, 0 horizontal
+   - Cursor: pointer
+   - Transition: opacity 200ms ease
+   - Hover State:
+     - Opacity: 0.8
+     - Text-decoration: optional (underline)
+   - Focus State:
+     - Outline: 2px solid --settings-primary
+     - Outline-offset: 2px
+
+9. **Info Text (Version, Data Source):**
+   - Font Size: 13px
+   - Font Weight: 400
+   - Color: --settings-text-secondary
+   - Margin-top: 4px
+   - Line-height: 1.5
+
+10. **Backdrop (wenn Modal):**
+    - Position: fixed, full screen
+    - Background: rgba(0, 0, 0, 0.5)
+    - Z-index: 999
+    - Dismiss: on click
+
+**Responsive Behavior:**
+
+Mobile (< 768px):
+- Modal: 90vw width, no max width initially
+- Padding: 16px
+- Font sizes: as specified
+
+Tablet/Desktop (>= 768px):
+- Modal: max 512px width
+- Padding: 24px
+- Font sizes: same
+
+**Animation/Transition (Optional):**
+- Modal appear: fade-in 200ms ease-out
+- Button hover: background-color 200ms ease
+- Link hover: opacity 200ms ease
+
+**Accessibility (WCAG 2.1 AA):**
+- Close Button: min 44x44px touch target ✓
+- Links: min 44px height (padding provides this) ✓
+- Color Contrast:
+  - Text: 4.5:1 minimum ✓
+  - Links: 4.5:1 minimum ✓
+  - Active Button: white on primary ✓
+- Keyboard Navigation:
+  - Tab order: Header → Buttons/Links → Close Button
+  - Focus visible: 2px outline, 2px offset ✓
+  - Escape key: close modal (optional, but recommended) ✓
+- Screen Reader:
+  - Header: semantic `<h3>` or role="heading" ✓
+  - Buttons: `<button>` elements ✓
+  - Links: `<a>` elements with href ✓
+  - Sections: semantic grouping or `<fieldset>` for theme toggle ✓
+  - Close button: `aria-label="Close"` ✓
+
+**CSS Implementation Template (Web/PWA):**
+
+```css
+/* Design Tokens */
+:root {
+  /* Colors */
+  --settings-bg: #ffffff;
+  --settings-text: #111827;
+  --settings-text-secondary: #6b7280;
+  --settings-border: #e5e7eb;
+  --settings-primary: #667eea;
+  --settings-button-bg: #f5f5f5;
+  --settings-button-active: #667eea;
+  --settings-button-active-text: #ffffff;
+
+  /* Typography */
+  --settings-title-size: 18px;
+  --settings-title-weight: 600;
+  --settings-section-title-size: 12px;
+  --settings-section-title-weight: 600;
+  --settings-link-size: 14px;
+  --settings-link-weight: 500;
+
+  /* Spacing */
+  --settings-modal-padding: 16px;
+  --settings-section-padding: 12px;
+  --settings-section-padding-h: 16px;
+  --settings-gap: 8px;
+
+  /* Sizing */
+  --settings-button-padding-v: 10px;
+  --settings-button-padding-h: 12px;
+  --settings-button-height: 40px;
+  --settings-button-border-radius: 6px;
+  --settings-modal-width: 512px;
+  --settings-modal-border-radius: 12px;
+  --settings-separator-height: 1px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --settings-bg: #1f2937;
+    --settings-text: #f3f4f6;
+    --settings-text-secondary: #9ca3af;
+    --settings-border: #374151;
+    --settings-button-bg: #374151;
+  }
+}
+
+/* Modal Container */
+.settings-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: var(--settings-modal-width);
+  max-height: 90vh;
+  padding: var(--settings-modal-padding);
+  background: var(--settings-bg);
+  border-radius: var(--settings-modal-border-radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+/* Backdrop */
+.settings-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Modal Header */
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--settings-border);
+}
+
+.settings-header h3 {
+  font-size: var(--settings-title-size);
+  font-weight: var(--settings-title-weight);
+  color: var(--settings-text);
+  margin: 0;
+}
+
+.settings-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--settings-text);
+  cursor: pointer;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 200ms ease;
+}
+
+.settings-close-btn:hover {
+  opacity: 0.7;
+}
+
+.settings-close-btn:focus-visible {
+  outline: 2px solid var(--settings-primary);
+  outline-offset: 2px;
+}
+
+/* Section Container */
+.settings-section {
+  padding: var(--settings-section-padding) var(--settings-section-padding-h);
+}
+
+/* Section Title */
+.settings-section-title {
+  font-size: var(--settings-section-title-size);
+  font-weight: var(--settings-section-title-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--settings-text-secondary);
+  margin: 0 0 var(--settings-gap) 0;
+}
+
+/* Separator */
+.settings-separator {
+  height: var(--settings-separator-height);
+  background: var(--settings-border);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Theme Toggle Container */
+.settings-theme-toggle {
+  display: flex;
+  gap: var(--settings-gap);
+  height: var(--settings-button-height);
+}
+
+/* Theme Buttons */
+.settings-theme-btn {
+  flex: 1;
+  padding: var(--settings-button-padding-v) var(--settings-button-padding-h);
+  background: var(--settings-button-bg);
+  color: var(--settings-text);
+  border: none;
+  border-radius: var(--settings-button-border-radius);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease;
+  min-height: var(--settings-button-height);
+}
+
+.settings-theme-btn:hover {
+  opacity: 0.8;
+}
+
+.settings-theme-btn:focus-visible {
+  outline: 2px solid var(--settings-primary);
+  outline-offset: 2px;
+}
+
+.settings-theme-btn.active {
+  background: var(--settings-button-active);
+  color: var(--settings-button-active-text);
+}
+
+/* Links */
+.settings-link {
+  display: block;
+  padding: var(--settings-section-padding) 0;
+  font-size: var(--settings-link-size);
+  font-weight: var(--settings-link-weight);
+  color: var(--settings-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.settings-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.settings-link:focus-visible {
+  outline: 2px solid var(--settings-primary);
+  outline-offset: 2px;
+}
+
+/* Info Text */
+.settings-info-text {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--settings-text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .settings-modal {
+    padding: 24px;
+  }
+}
+```
+
+**Verifikationscheckliste - Settings Menu Aussehen:**
+
+- [ ] Header: 18px, 600 weight, "Settings" text
+- [ ] Close button: 24px, 44x44px touch target, transparent bg
+- [ ] Section titles: 12px, uppercase, 0.5px letter-spacing, grau
+- [ ] Theme buttons: 3x flex width, 40px height, 8px gap
+- [ ] Active button: primary color (#667eea), white text
+- [ ] Separators: 1px, border color, no margin
+- [ ] Links: 14px, 500 weight, primary color
+- [ ] Touch targets: all interactive elements >= 44px
+- [ ] Dark mode: all colors inverted correctly
+- [ ] Hover states: opacity 0.8 or color change
+- [ ] Focus indicators: 2px outline, 2px offset
+- [ ] Backdrop: semi-transparent (rgba(0,0,0,0.5))
+- [ ] Modal centered: 90vw width, max 512px
+- [ ] Spacing: consistent padding/margins per spec
+- [ ] Transitions: 200ms ease
+
 **Status (Stand Nov 2025):**
 - ✅ EnergyPriceGermany - Refactored
 - ✅ 1x1 Trainer - Refactored
