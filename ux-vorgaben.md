@@ -247,25 +247,147 @@ header {
 }
 ```
 
-**Settings Menu Content:**
-- Öffnet Modal/Dropdown mit Links
-- Einziger Link: "Buy Me a Coffee" zu buymeacoffee.com/sven4321
-- Nur Plain Text, keine Emojis
-- Platzierung: Settings-Modal oder Dropdown-Menu
+**Settings Menu Content - Standardized Structure:**
 
-**Beispiel Menu Content:**
+Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
+
+1. **Appearance Settings**
+   - Theme Toggle (Light / Dark / System)
+   - Buttons: Plain Text, kein Emoji
+   - Active Button: Visuell deutlich markiert (z.B. andere Farbe)
+   - Speichern in localStorage/AsyncStorage
+
+2. **Feedback**
+   - Single Link: "Send Feedback"
+   - Action: `mailto:feedback@example.com`
+   - Plain Text, kein Emoji
+
+3. **About**
+   - "ABOUT" als Section Title (Uppercase)
+   - Version Info: "Version X.Y.Z"
+   - Optional: Data Source Info (für Daten-Apps)
+
+4. **Support**
+   - Link: "Buy Me a Coffee"
+   - URL: `https://buymeacoffee.com/sven4321`
+   - Plain Text, kein Emoji
+
+**Spezifikationen:**
+- Nur Plain Text Labels, KEINE Emojis (⋮ ist OK für Settings Button selbst, aber nicht im Menu)
+- Separatoren zwischen Sections
+- Section Titles: Kleinbuchstaben, UPPERCASE, 12px, grau
+- Links: Primary Color (z.B. #667eea), Hover-State, Touch Target 44px+
+- Modal: Max 512px Width, Padding 16-24px, Close Button (×)
+
+**Beispiel (Web/PWA - HTML):**
 ```html
 <div class="settings-menu">
-  <a href="https://buymeacoffee.com/sven4321">Buy Me a Coffee</a>
+  <!-- Appearance -->
+  <div class="settings-section">
+    <h4 class="section-title">APPEARANCE</h4>
+    <div class="theme-toggle">
+      <button class="theme-btn active" data-theme="light">Light</button>
+      <button class="theme-btn" data-theme="dark">Dark</button>
+      <button class="theme-btn" data-theme="system">System</button>
+    </div>
+  </div>
+
+  <hr class="settings-separator">
+
+  <!-- Feedback -->
+  <div class="settings-section">
+    <a href="mailto:feedback@example.com" class="settings-link">Send Feedback</a>
+  </div>
+
+  <hr class="settings-separator">
+
+  <!-- About -->
+  <div class="settings-section">
+    <h4 class="section-title">ABOUT</h4>
+    <p>Version 1.0.0</p>
+  </div>
+
+  <hr class="settings-separator">
+
+  <!-- Support -->
+  <div class="settings-section">
+    <a href="https://buymeacoffee.com/sven4321" target="_blank" class="settings-link">
+      Buy Me a Coffee
+    </a>
+  </div>
 </div>
+```
+
+**Beispiel (React Native - TypeScript):**
+```typescript
+const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('system');
+
+const renderAppearanceSection = () => (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>APPEARANCE</Text>
+    <View style={styles.themeToggle}>
+      {(['light', 'dark', 'system'] as const).map((mode) => (
+        <TouchableOpacity
+          key={mode}
+          style={[
+            styles.themeButton,
+            themeMode === mode && styles.themeButtonActive
+          ]}
+          onPress={() => setThemeMode(mode)}
+        >
+          <Text style={styles.themeButtonText}>
+            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
 ```
 
 **Store Compliance:**
 Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-App-Werbung"
 - "Contains Ads": ❌ NO
 - "In-App Purchases": ❌ NO
+- Settings Menu ist Teil der App-Funktion, nicht Werbung
 
 **Betroffene Projekte:** Energy Price Germany, 1x1 Trainer, Eisenhauer, Pflanzkalender
+
+**Status (Stand Nov 2025):**
+- ✅ EnergyPriceGermany - Refactored
+- ✅ 1x1 Trainer - Refactored
+- ✅ Eisenhauer - Refactored
+- ✅ Pflanzkalender - Refactored
+- ⏳ CD-to-Spotify-PWA - Pending (in development)
+
+### Emoji-Richtlinien
+
+**Wo emojis OK sind:**
+- ✅ Settings Button selbst (⋮ für Menü-Icon)
+- ✅ Dekoration/Branding in Dokumentation
+- ✅ Fehlerberichte & Commit-Messages (für Entwickler)
+- ✅ Loading/Success Messages (als Icon, nicht als Text)
+
+**Wo emojis NICHT verwendet werden:**
+- ❌ Navigations-Labels (statt 📅 "Calendar", statt 📋 "Agenda")
+- ❌ Button-Labels (statt "🔁 Refresh" → "Refresh")
+- ❌ Settings Menu Items (statt "📧 Feedback" → "Send Feedback")
+- ❌ Menü-Einträge und Links
+- ❌ Überschriften und Titel
+- ❌ Durchschnittliche UI-Labels
+
+**Rationale:**
+- Emojis sind inkonsistent über Plattformen (unterschiedliche Rendering)
+- Schlechter Support auf älteren Geräten/Browsern
+- Accessibility: Screen Reader lesen Emoji-Namen, nicht Labels
+- Professionelleres Erscheinungsbild
+- Bessere Lesbarkeit für Non-Native Speaker
+
+**Ausnahmen für spezifische Projekte:**
+- Richter Matrix (Eisenhauer): Keine Emojis im UI
+- Energie (Energy Price Germany): Keine Emojis im UI
+- 1x1 Trainer: Keine Emojis im UI
+- Pflanzen (Pflanzkalender): Keine Emojis im UI
 
 ### Images & Multimedia
 - **Alt Text:** Jedes `<img>` braucht `alt` Attribut (kann leer sein wenn dekorativ)
