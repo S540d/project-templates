@@ -78,7 +78,16 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
    - Sicherheit & Rechtliches
    - Dokumentation
 
-7. **GOOGLE_PLAY_STORE_ROADMAP.md**
+7. **PLAYSTORE_STATUS_OVERVIEW.md** (NEW)
+   - Zentrale Statusübersicht für alle 5 Projekte
+   - Quick Status Dashboard (Tabelle)
+   - Detaillierte Status & Timeline für jedes Projekt
+   - Week-by-week Implementation Plans
+   - Konsolidierter Timeline Overview
+   - Links zu projekt-spezifischen Checklisten
+   - Weekly Sync Template & Key Metrics
+
+8. **GOOGLE_PLAY_STORE_ROADMAP.md**
    - Komplette Roadmap für Google Play Store Veröffentlichung aller Projekte
    - Phase-by-Phase Implementation Guides mit Checklisten
    - Technische Anforderungen (Android SDK, Build, Signing)
@@ -89,16 +98,16 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
 
 ### GitHub Integration
 
-8. **.github/ISSUE_TEMPLATE/** (Zentrale Issue Templates)
+9. **.github/ISSUE_TEMPLATE/** (Zentrale Issue Templates)
    - `bug.md` - Bug Reports
    - `feature.md` - Feature Requests
    - `documentation.md` - Documentation Requests
    - `question.md` - Questions / Discussions
 
-9. **.github/PULL_REQUEST_TEMPLATE/** (Zentrale PR Templates)
+10. **.github/PULL_REQUEST_TEMPLATE/** (Zentrale PR Templates)
    - `default.md` - Standard PR Template mit Checklisten
 
-10. **.github/README.md**
+11. **.github/README.md**
    - Dokumentation der GitHub Templates
    - Best Practices für Issues und PRs
    - Verwendung und Anpassung
