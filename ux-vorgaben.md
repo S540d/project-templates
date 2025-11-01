@@ -252,25 +252,28 @@ header {
 Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
 
 1. **Appearance Settings**
-   - Theme Toggle (Light / Dark / System)
-   - Buttons: Plain Text, kein Emoji
-   - Active Button: Visuell deutlich markiert (z.B. andere Farbe)
-   - Speichern in localStorage/AsyncStorage
+   - so schmal und kompakt wie möglich
+   - Theme Toggle (Dark / System)
+   - Toggle (deutsch/english)
+   - jeweils: Buttons: Plain Text, kein Emoji; Active Button: Visuell deutlich markiert (z.B. andere Farbe)
+   
 
-2. **Feedback**
-   - Single Link: "Send Feedback"
-   - Action: `mailto:feedback@example.com`
+2. **Export** / Data Management**  
+   - Speichern in localStorage/AsyncStorage
+   - Taste zum Export der Daten als Json-Daten (optional)
+
+3. **Feedback und Support**
+   - Single Link: "Send Feedback" mit Action: `mailto:feedback@example.com`
+   - Plain Text, kein Emoji
+   - Single Link: "Buy Me a Coffee" zur URL `https://buymeacoffee.com/sven4321`
    - Plain Text, kein Emoji
 
-3. **About**
+4. **About**
    - "ABOUT" als Section Title (Uppercase)
    - Version Info: "Version X.Y.Z"
-   - Optional: Data Source Info (für Daten-Apps)
+   - wenn externe Daten verwendet werden: Data Source Info 
+   - Lizenz der App: Open Source • MIT Lizenz, Keine kommerzielle Nutzung ohne Genehmigung
 
-4. **Support**
-   - Link: "Buy Me a Coffee"
-   - URL: `https://buymeacoffee.com/sven4321`
-   - Plain Text, kein Emoji
 
 **Spezifikationen:**
 - Nur Plain Text Labels, KEINE Emojis (⋮ ist OK für Settings Button selbst, aber nicht im Menu)
