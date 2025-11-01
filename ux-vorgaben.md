@@ -213,6 +213,32 @@ Basiere alle Abstände auf 8px Inkremente für Konsistenz:
 - **Focus Visible:** `:focus-visible` für Tastaturnavigation
 - **Touch Target:** Mindestens 44px × 44px
 
+### Support-Links und Store Compliance
+Platzierung von Support-Links (Buy Me a Coffee, Ko-fi, Patreon, etc.)
+Regel: Support-Links dürfen NICHT als eigenständiger Button im Footer oder anderen prominent sichtbaren Bereichen platziert werden.
+Korrekte Platzierung:
+Im Settings-Menü oder About-Menü
+Zusammen mit anderen Meta-Informationen (Version, GitHub Link, Privacy Policy)
+Als Teil einer "Support"-Sektion innerhalb der App-Einstellungen
+Benennung:
+✅ "Buy Me a Coffee ☕" (als Link zu buymeacoffee.com/sven4321)
+Begründung: Prominent platzierte Support-Links können von Google Play Store und Apple App Store als "In-App-Werbung" interpretiert werden. Dies würde die Angabe "Contains Ads" erfordern und könnte Review-Prozesse erschweren. Support-Links im Settings-Kontext entsprechen dem Industriestandard (vergleichbar mit GitHub Sponsors, Patreon-Links in Open Source Apps) und sind nicht als Werbung klassifiziert.
+Implementierung:
+// Im Settings/About-Menü:
+<View style={styles.supportSection}>
+  <Text style={styles.sectionTitle}>Support</Text>
+  <TouchableOpacity onPress={() => Linking.openURL('https://buymeacoffee.com/...')}>
+    <Text style={styles.linkText}>💝 Support the Project</Text>
+  </TouchableOpacity>
+  <TouchableOpacity onPress={() => Linking.openURL('https://github.com/...')}>
+    <Text style={styles.linkText}>🔗 GitHub Repository</Text>
+  </TouchableOpacity>
+</View>
+Store-Angaben:
+"Contains Ads": ❌ NO
+"In-App Purchases": ❌ NO
+Betroffene Projekte: Alle Apps (1x1 Trainer, Eisenhauer, Energy Price Germany, Pflanzkalender, CD_to_Spotify)
+
 ### Images & Multimedia
 - **Alt Text:** Jedes `<img>` braucht `alt` Attribut (kann leer sein wenn dekorativ)
 - **Meaningful Alt:** Beschreibe den Inhalt, nicht "image of..."
