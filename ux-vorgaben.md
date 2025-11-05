@@ -258,17 +258,25 @@ Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
    - jeweils: Buttons: Plain Text, kein Emoji; Active Button: Visuell deutlich markiert (z.B. andere Farbe)
    
 
-2. **Export** / Data Management**  
+2. **User Account Management** (nur wenn Benutzer-Anmeldung vorhanden)
+   - Wenn eine Benutzeranmeldung implementiert ist (z.B. Google Sign-In, Apple Sign-In, etc.), **MUSS** ein "Sign Out" / "Abmelden"-Button in den Einstellungen vorhanden sein
+   - Button-Text: "Sign Out" (EN) / "Abmelden" (DE)
+   - Style: Primary color link oder destructive button style (rot/orange) je nach Design
+   - Platzierung: Oberhalb von "Export" section oder als separate Section
+   - Action: Führt Abmeldung durch und zeigt Login-Screen
+   - Sichtbarkeit: Nur sichtbar wenn Benutzer authentifiziert ist (nicht im Gastmodus)
+
+3. **Export** / Data Management**
    - Speichern in localStorage/AsyncStorage
    - Taste zum Export der Daten als Json-Daten (optional)
 
-3. **Feedback und Support**
+4. **Feedback und Support**
    - Single Link: "Send Feedback" mit Action: `mailto:feedback@example.com`
    - Plain Text, kein Emoji
    - Single Link: "Buy Me a Coffee" zur URL `https://buymeacoffee.com/sven4321`
    - Plain Text, kein Emoji
 
-4. **About**
+5. **About**
    - "ABOUT" als Section Title (Uppercase)
    - Version Info: "Version X.Y.Z"
    - wenn externe Daten verwendet werden: Data Source Info 
