@@ -889,6 +889,238 @@ Tablet/Desktop (>= 768px):
 
 ---
 
+## Android-Spezifische Vorgaben
+
+### Edge-to-Edge Display (Android 15+)
+
+**KRITISCH:** Ab Android 15 (SDK 35+) sind Apps **standardmäßig randlos**. Alle Android-Apps MÜSSEN Edge-to-Edge kompatibel sein.
+
+#### Anforderungen
+
+**Build Configuration:**
+```kotlin
+// app/build.gradle.kts
+android {
+    compileSdk = 36  // Android 15+
+
+    defaultConfig {
+        targetSdk = 36  // WICHTIG: Android 15+
+        minSdk = 21
+    }
+}
+
+dependencies {
+    // Material Components - Mindestens v1.13.0
+    implementation("com.google.android.material:material:1.13.0")
+
+    // AndroidX Core - für WindowCompat
+    implementation("androidx.core:core-ktx:1.17.0")
+}
+```
+
+**Version Catalog (gradle/libs.versions.toml):**
+```toml
+[versions]
+agp = "8.13.0"
+kotlin = "2.2.21"  # Neueste stabile Version
+material = "1.13.0"  # MINDESTENS 1.13.0!
+coreKtx = "1.17.0"
+
+[libraries]
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+```
+
+#### MainActivity Implementation
+
+**WICHTIG:** Edge-to-Edge MUSS explizit aktiviert werden:
+
+```kotlin
+// MainActivity.kt
+import androidx.core.view.WindowCompat
+
+class MainActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Enable Edge-to-Edge for Android 15+ compatibility
+        enableEdgeToEdge()
+
+        // ... rest of your code
+    }
+
+    private fun enableEdgeToEdge() {
+        // Enable edge-to-edge display for Android 15+ compatibility
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
+}
+```
+
+**✅ VERWENDEN:**
+- `WindowCompat.setDecorFitsSystemWindows(window, false)`
+
+**❌ NICHT VERWENDEN (Deprecated):**
+- `FLAG_LAYOUT_NO_LIMITS` (deprecated)
+- `window.setStatusBarColor()` (deprecated in Android 15)
+- `window.setNavigationBarColor()` (deprecated in Android 15)
+
+#### Theme Configuration
+
+**values/themes.xml (Light Mode):**
+```xml
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.YourApp" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Edge-to-Edge configuration for Android 15+ -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
+    </style>
+
+    <style name="Theme.YourApp" parent="Base.Theme.YourApp" />
+</resources>
+```
+
+**values-night/themes.xml (Dark Mode):**
+```xml
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.YourApp" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Edge-to-Edge configuration for Android 15+ (Dark Mode) -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
+    </style>
+</resources>
+```
+
+**Theme-Eigenschaften Erklärung:**
+- `statusBarColor`: Transparent für Edge-to-Edge
+- `navigationBarColor`: Transparent für Edge-to-Edge
+- `windowLightStatusBar`: `true` (Light Mode), `false` (Dark Mode) - Steuert Icon-Farbe
+- `windowLightNavigationBar`: `true` (Light Mode), `false` (Dark Mode) - Steuert Button-Farbe
+- `enforceNavigationBarContrast`: `false` - Bessere Kontrolle über Appearance
+- `enforceStatusBarContrast`: `false` - Bessere Kontrolle über Appearance
+
+**WICHTIG:** Verwende **Theme.Material3** als Parent, nicht Theme.MaterialComponents (veraltet)
+
+#### Window Insets Handling (Optional)
+
+**Nur notwendig bei eigenen UI-Elementen** (nicht bei TWA/WebView-Apps):
+
+```kotlin
+ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+    val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+    v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+    insets
+}
+```
+
+**Bei TWA/WebView Apps:** Nicht notwendig, da automatisch gehandhabt.
+
+#### Java Toolchain Konfiguration
+
+**Problem:** Kotlin 2.2.21 unterstützt Java 25 noch nicht.
+
+**Lösung (gradle.properties):**
+```properties
+# Verwende Java 23 oder niedriger
+org.gradle.java.home=/path/to/java-23
+```
+
+**Kompatibilität:**
+- Kotlin 2.2.21: Java 24 oder niedriger
+- Kotlin 2.3.0+: Java 25 Support
+
+#### Checkliste - Edge-to-Edge Implementation
+
+**Build Configuration:**
+- [ ] `compileSdk = 36`
+- [ ] `targetSdk = 36`
+- [ ] Material Components >= 1.13.0
+- [ ] AndroidX Core >= 1.17.0
+- [ ] Kotlin >= 2.2.21
+
+**MainActivity:**
+- [ ] `WindowCompat.setDecorFitsSystemWindows(window, false)` implementiert
+- [ ] Keine deprecated `FLAG_LAYOUT_NO_LIMITS` Verwendung
+- [ ] Import: `androidx.core.view.WindowCompat`
+
+**Themes:**
+- [ ] `android:statusBarColor` = transparent
+- [ ] `android:navigationBarColor` = transparent
+- [ ] `android:windowLightStatusBar` konfiguriert (Light/Dark Mode)
+- [ ] `android:windowLightNavigationBar` konfiguriert (Light/Dark Mode)
+- [ ] `enforceNavigationBarContrast` = false
+- [ ] `enforceStatusBarContrast` = false
+- [ ] Separate themes.xml für `-night` (Dark Mode)
+
+**Testing:**
+- [ ] Build erfolgreich ohne Warnungen
+- [ ] Keine "Edge-to-Edge" Warnungen in Play Console
+- [ ] Keine "deprecated API" Warnungen
+- [ ] Test auf Android 15+ Gerät/Emulator
+
+#### Google Play Console Warnungen
+
+**Diese Warnungen werden durch korrekte Implementation behoben:**
+
+✅ "Die randlose Anzeige funktioniert möglicherweise nicht für alle Nutzer"
+→ **Gelöst durch:** Explizite Edge-to-Edge Aktivierung
+
+✅ "Verwendung von deprecated APIs (setStatusBarColor, setNavigationBarColor)"
+→ **Gelöst durch:** Material Components 1.13.0 + Theme-basierte Konfiguration
+
+#### Troubleshooting
+
+**Problem: Kotlin Compiler Error mit Java 25**
+```
+IllegalArgumentException: 25
+```
+**Lösung:** Kotlin 2.2.21 unterstützt Java 25 noch nicht
+```properties
+# gradle.properties
+org.gradle.java.home=/path/to/java-23
+```
+
+**Problem: Material Components deprecated API Warnung**
+```
+setStatusBarColor is deprecated
+```
+**Lösung:** Material Components auf 1.13.0+ aktualisieren
+
+**Problem: Status Bar Icons nicht sichtbar**
+```
+Status bar icons are the same color as background
+```
+**Lösung:** `windowLightStatusBar` korrekt setzen
+```xml
+<!-- Light Mode -->
+<item name="android:windowLightStatusBar">true</item>
+
+<!-- Dark Mode -->
+<item name="android:windowLightStatusBar">false</item>
+```
+
+#### Referenzen
+
+- [Android Edge-to-Edge Guide](https://developer.android.com/develop/ui/views/layout/edge-to-edge)
+- [WindowCompat API](https://developer.android.com/reference/androidx/core/view/WindowCompat)
+- [Material Design 3](https://m3.material.io/)
+- [Android 15 Behavior Changes](https://developer.android.com/about/versions/15/behavior-changes-15)
+
+**Status (Stand Nov 2025):**
+- ✅ 1x1 Trainer v1.0.2 - Implementiert & verifiziert
+
+---
+
 ## Internationalisierung (i18n)
 
 ### Mehrsprachigkeit
@@ -937,6 +1169,7 @@ Tablet/Desktop (>= 768px):
 
 ## Checkliste für neues Projekt
 
+### Allgemein (Web & Mobile)
 - [ ] Color Palette definiert (min. 5 Farben)
 - [ ] Typography definiert (max. 2 Fonts)
 - [ ] Spacing System definiert (8px Grid)
@@ -951,5 +1184,16 @@ Tablet/Desktop (>= 768px):
 - [ ] Error States implementiert
 - [ ] Empty States implementiert
 - [ ] Lighthouse Audit >= 80 Points
+
+### Android-Spezifisch (zusätzlich)
+- [ ] Edge-to-Edge implementiert (WindowCompat.setDecorFitsSystemWindows)
+- [ ] Material Components >= 1.13.0
+- [ ] targetSdk = 36 (Android 15+)
+- [ ] Themes konfiguriert (Light & Dark Mode)
+- [ ] Status Bar transparent
+- [ ] Navigation Bar transparent
+- [ ] Keine deprecated APIs verwendet
+- [ ] Build ohne Warnungen
+- [ ] Play Console Pre-Launch Report ohne Fehler
 
 ---
