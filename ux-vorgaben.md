@@ -1121,6 +1121,192 @@ Status bar icons are the same color as background
 
 ---
 
+## PWA & React Native Vorgaben
+
+### Expo OTA Updates (Critical)
+
+**KRITISCH:** Alle PWA/React Native Apps mit Expo MÜSSEN die OTA (Over-The-Air) Updates Konfiguration **bereits im ersten Play Store Build** enthalten.
+
+#### Problem
+
+Wenn eine App ohne OTA-Konfiguration im Play Store veröffentlicht wird, können **keine Code-Updates** an Benutzer ausgeliefert werden, ohne einen neuen Play Store Build zu erstellen. Dies betrifft besonders Apps im öffentlichen Test, da Benutzer auf einen neuen Store-Build warten müssen.
+
+**Real-World Beispiel (Energy Price Germany v1.2.1):**
+- App wurde mit Version 1.2.1 im Play Store veröffentlicht
+- OTA-Konfiguration wurde **nach** dem Build zu app.json hinzugefügt
+- Benutzer im öffentlichen Test konnten keine Updates erhalten
+- Bugfixes und UI-Verbesserungen konnten nicht ausgeliefert werden
+- Lösung: Neuer Play Store Build erforderlich
+
+#### Anforderungen
+
+**app.json - MUSS von Anfang an enthalten sein:**
+
+```json
+{
+  "expo": {
+    "name": "Your App Name",
+    "slug": "your-app-slug",
+    "version": "1.0.0",
+
+    // OTA Updates Configuration - KRITISCH!
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/YOUR-PROJECT-ID"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "YOUR-PROJECT-ID"
+      }
+    }
+  }
+}
+```
+
+**Wichtige Eigenschaften:**
+
+- **`updates.enabled: true`** - Aktiviert OTA Updates
+- **`updates.checkAutomatically: "ON_LOAD"`** - Prüft bei jedem App-Start
+- **`updates.fallbackToCacheTimeout: 0`** - Nutzt neue Updates sofort (kein Fallback auf Cache)
+- **`updates.url`** - Expo Updates Server URL (von EAS Console)
+- **`runtimeVersion.policy: "appVersion"`** - Verknüpft Updates mit App-Version
+- **`extra.eas.projectId`** - Expo Project ID (von EAS Console)
+
+#### RuntimeVersion Matching
+
+**Kritisch:** OTA Updates funktionieren nur, wenn die `runtimeVersion` der App und des Updates übereinstimmen.
+
+**Mit `policy: "appVersion"`:**
+- RuntimeVersion = app.json `version` Feld
+- Beispiel: App v1.2.1 kann nur Updates für runtimeVersion "1.2.1" empfangen
+- Bei Version-Increment (1.2.1 → 1.2.2) ist neuer Play Store Build erforderlich
+
+**Vorteile:**
+- Einfach zu verstehen
+- Verhindert Inkompatibilitäten zwischen Updates und nativen Modulen
+- Sichere Update-Strategie
+
+**Alternative: Custom RuntimeVersion (nicht empfohlen für Anfang):**
+```json
+"runtimeVersion": "1.0.0"
+```
+
+#### Workflow - OTA Updates nutzen
+
+**1. Ersten Play Store Build erstellen:**
+```bash
+# Mit OTA-Konfiguration in app.json!
+eas build --platform android --profile production
+```
+
+**2. Code-Änderungen ausliefern (ohne Store-Build):**
+```bash
+# Publish OTA Update
+eas update --branch production --message "Fix: Improve chart label positioning"
+```
+
+**3. Benutzer erhalten Update:**
+- Beim nächsten App-Start wird Update geprüft
+- Update wird heruntergeladen und installiert
+- Beim übernächsten Start ist neuer Code aktiv
+- **Keine Play Store Genehmigung erforderlich**
+
+**4. Wann neuer Store-Build erforderlich:**
+- Änderungen an nativen Modulen (dependencies in package.json)
+- Änderungen an app.json Konfiguration (Permissions, etc.)
+- Version-Increment (1.2.1 → 1.2.2) bei policy: "appVersion"
+- Änderungen an Android/iOS nativen Dateien
+
+#### Platform-Detection für Data Loading
+
+**Problem:** React Native und Web benötigen unterschiedliche URLs für externe Daten.
+
+**Falsch - Window Detection funktioniert nicht:**
+```typescript
+// ❌ NICHT VERWENDEN - React Native hat auch window!
+const isWeb = typeof window !== 'undefined';
+```
+
+**Richtig - Platform.OS verwenden:**
+```typescript
+import { Platform } from 'react-native';
+
+// ✅ KORREKT
+const dataUrl = Platform.OS === 'web'
+  ? './data/marketdata.json?v=${Date.now()}'
+  : 'https://yourdomain.github.io/YourApp/data/marketdata.json?v=${Date.now()}';
+
+const response = await fetch(dataUrl);
+```
+
+**Rationale:**
+- Native Apps haben keine relativen Dateipfade im Bundle
+- Web-Apps können relative Pfade nutzen
+- `Platform.OS` ist die zuverlässige Methode zur Platform-Detection
+
+#### Checkliste - OTA Updates Setup
+
+**Vor erstem Play Store Build:**
+- [ ] Expo Account erstellt
+- [ ] EAS CLI installiert (`npm install -g eas-cli`)
+- [ ] Project mit EAS verbunden (`eas init`)
+- [ ] Project ID in app.json eingetragen
+- [ ] `updates` Konfiguration in app.json vorhanden
+- [ ] `runtimeVersion` policy definiert
+- [ ] EAS Build erfolgreich (`eas build --platform android`)
+
+**Nach erstem Play Store Build:**
+- [ ] OTA Update Test: `eas update --branch production --message "Test"`
+- [ ] Update wird in EAS Console angezeigt
+- [ ] App lädt Update beim Start (prüfen mit Expo DevTools)
+- [ ] Platform-spezifische Data Loading implementiert (falls externe Daten)
+- [ ] Dokumentation für Team: Wie OTA Updates deployed werden
+
+**Bei jedem Code-Update:**
+- [ ] Entscheiden: OTA Update oder neuer Store-Build?
+- [ ] Wenn OTA: `eas update` nutzen
+- [ ] Wenn Store-Build: Version incrementieren, neu builden
+
+#### Troubleshooting
+
+**Problem: "No updates available"**
+```bash
+# Check: RuntimeVersion matching
+eas update:list --branch production
+# RuntimeVersion muss mit App-Version übereinstimmen
+```
+
+**Problem: Update wird nicht geladen**
+```bash
+# Check: Updates URL in app.json korrekt?
+# Check: Internet-Verbindung auf Gerät?
+# Check: Branch name korrekt? (production vs preview)
+```
+
+**Problem: App zeigt alte Version nach Update**
+```bash
+# Solution: App komplett schließen (nicht nur minimieren)
+# Dann neu starten - Update wird beim zweiten Start aktiv
+```
+
+#### Referenzen
+
+- [Expo OTA Updates Guide](https://docs.expo.dev/eas-update/introduction/)
+- [RuntimeVersion Policy](https://docs.expo.dev/eas-update/runtime-versions/)
+- [Platform-specific Code](https://reactnative.dev/docs/platform-specific-code)
+
+**Status (Stand Nov 2025):**
+- ✅ Requirement dokumentiert nach Energy Price Germany Incident
+- ⏳ Alle zukünftigen PWA-Projekte MÜSSEN diese Vorgabe beachten
+
+---
+
 ## Internationalisierung (i18n)
 
 ### Mehrsprachigkeit
@@ -1195,5 +1381,15 @@ Status bar icons are the same color as background
 - [ ] Keine deprecated APIs verwendet
 - [ ] Build ohne Warnungen
 - [ ] Play Console Pre-Launch Report ohne Fehler
+
+### PWA/React Native (Expo) - Spezifisch (zusätzlich)
+- [ ] Expo Account erstellt und EAS CLI installiert
+- [ ] OTA Updates Konfiguration in app.json vorhanden (VOR erstem Build!)
+- [ ] `updates.enabled: true` gesetzt
+- [ ] `runtimeVersion.policy` definiert (empfohlen: "appVersion")
+- [ ] Expo Project ID in app.json eingetragen
+- [ ] Platform-spezifische Data Loading implementiert (Platform.OS === 'web')
+- [ ] Erste OTA Update Test erfolgreich nach Play Store Build
+- [ ] Team-Dokumentation: OTA Update Workflow
 
 ---
