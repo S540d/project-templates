@@ -1121,6 +1121,260 @@ Status bar icons are the same color as background
 
 ---
 
+### Android App Links (Deep Linking)
+
+**WICHTIG:** Apps sollten Android App Links implementieren, damit Website-URLs automatisch die App öffnen (statt des Browsers).
+
+#### Warum Android App Links?
+
+Wenn ein Nutzer auf einen Link zu deiner Website klickt (z.B. in einer E-Mail oder einem anderen Browser), öffnet sich normalerweise der Browser. Mit Android App Links wird **automatisch die App geöffnet** (falls installiert).
+
+**Beispiel:**
+- **Ohne App Links:** `https://s540d.github.io/1x1_Trainer/` → Browser öffnet sich
+- **Mit App Links:** `https://s540d.github.io/1x1_Trainer/` → App öffnet sich direkt
+
+#### Anforderungen
+
+Für funktionierende Android App Links benötigst du **zwei Dinge**:
+
+1. **Digital Asset Links** auf der Website (`.well-known/assetlinks.json`)
+2. **Intent-Filter** in der App (`app.json` oder `AndroidManifest.xml`)
+
+#### Setup für Expo/React Native Apps
+
+**1. Digital Asset Links erstellen:**
+
+```bash
+mkdir -p public/.well-known
+```
+
+**public/.well-known/assetlinks.json:**
+```json
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.yourcompany.yourapp",
+      "sha256_cert_fingerprints": [
+        "SHA256_FINGERPRINT_FROM_PLAY_CONSOLE"
+      ]
+    }
+  }
+]
+```
+
+**2. Intent-Filter in app.json:**
+
+```json
+{
+  "expo": {
+    "android": {
+      "package": "com.yourcompany.yourapp",
+      "versionCode": 2,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "yourdomain.github.io",
+              "pathPrefix": "/YourApp"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    }
+  }
+}
+```
+
+**3. Build-Skript anpassen:**
+
+```javascript
+// scripts/post-build.js
+const filesToCopy = [
+  { src: 'public/.nojekyll', dest: 'dist/.nojekyll' },  // WICHTIG!
+  { src: 'public/.well-known/assetlinks.json', dest: 'dist/.well-known/assetlinks.json' }
+];
+
+filesToCopy.forEach(({ src, dest }) => {
+  const srcPath = path.join(__dirname, '..', src);
+  const destPath = path.join(__dirname, '..', dest);
+
+  if (fs.existsSync(srcPath)) {
+    const destDir = path.dirname(destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+    fs.copyFileSync(srcPath, destPath);
+    console.log(`✓ Copied ${src} to ${dest}`);
+  }
+});
+```
+
+**4. .nojekyll erstellen:**
+
+```bash
+touch public/.nojekyll
+```
+
+**WICHTIG:** Ohne `.nojekyll` ignoriert GitHub Pages versteckte Verzeichnisse wie `.well-known`!
+
+**5. Deployen:**
+
+```bash
+npm run deploy
+```
+
+Stelle sicher, dass dein deploy-Skript das `--dotfiles` Flag verwendet:
+
+```json
+{
+  "scripts": {
+    "deploy:gh-pages": "gh-pages -d dist -t --dotfiles"
+  }
+}
+```
+
+**6. SHA-256 Fingerabdruck holen:**
+
+1. Gehe zur [Google Play Console](https://play.google.com/console/)
+2. Wähle deine App
+3. **Setup → App-Integrität → App signing key certificate**
+4. Kopiere den **SHA-256 Zertifikatfingerabdruck**
+5. **Entferne die Doppelpunkte:** `AA:BB:CC:DD` → `AABBCCDD`
+6. Trage ihn in `assetlinks.json` ein
+7. Deploye erneut: `npm run deploy`
+
+**7. Neue App-Version bauen:**
+
+```bash
+# Version hochzählen in app.json
+{
+  "version": "1.0.1",
+  "android": {
+    "versionCode": 2
+  }
+}
+
+# Build erstellen
+npx eas-cli build --platform android
+
+# Im Play Store hochladen
+```
+
+#### Setup für TWA (Android Studio) Apps
+
+**AndroidManifest.xml:**
+
+```xml
+<activity
+    android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+    android:exported="true">
+
+    <!-- Deep Link Intent Filter -->
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data
+            android:scheme="https"
+            android:host="yourdomain.github.io"
+            android:pathPrefix="/YourApp" />
+    </intent-filter>
+</activity>
+```
+
+Alle anderen Schritte (Digital Asset Links, .nojekyll, Deployment, SHA-256) sind identisch mit Expo Apps.
+
+#### Testen
+
+**Vor dem Upload (lokal):**
+
+```bash
+# assetlinks.json validieren
+curl -I https://yourdomain.github.io/.well-known/assetlinks.json
+
+# Erwartetes Ergebnis:
+# HTTP/2 200
+# content-type: application/json
+```
+
+**Nach dem Upload (Play Store):**
+
+1. **Play Console öffnen**
+2. **Setup → Deep Links**
+3. Prüfe den Status:
+   - ✅ **Verifiziert** - Alles okay!
+   - ⚠️ **Ausstehend** - Warte 24h
+   - ❌ **Fehlgeschlagen** - Prüfe assetlinks.json und SHA-256
+
+**Auf dem Gerät testen:**
+
+```bash
+# Deep Link über adb testen
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "https://yourdomain.github.io/YourApp" \
+  com.yourcompany.yourapp
+```
+
+**Erwartetes Verhalten:** App öffnet sich direkt (kein Browser-Auswahl-Dialog)
+
+#### Häufige Fehler
+
+**❌ "Prüfung auf JSON-Inhaltstyp fehlgeschlagen"**
+- **Problem:** GitHub Pages liefert falschen Content-Type
+- **Lösung:** `.nojekyll` Datei erstellen
+
+**❌ "assetlinks.json nicht gefunden"**
+- **Problem:** `.well-known` Verzeichnis wurde nicht deployed
+- **Lösung:** `--dotfiles` Flag beim gh-pages Deploy verwenden
+
+**❌ "SHA-256 Fingerabdruck stimmt nicht überein"**
+- **Problem:** Falscher oder alter Fingerabdruck
+- **Lösung:** Aktuellen Fingerabdruck aus Play Console holen, **ohne Doppelpunkte** eintragen
+
+**❌ "Intent-Filter werden ignoriert"**
+- **Problem:** App wurde nicht neu gebaut
+- **Lösung:** `versionCode` erhöhen, neu bauen, im Play Store hochladen
+
+#### Checkliste - Android App Links
+
+- [ ] `.well-known/assetlinks.json` erstellt
+- [ ] `public/.nojekyll` erstellt
+- [ ] Build-Skript kopiert `.well-known/` nach `dist/`
+- [ ] `--dotfiles` Flag in deploy-Skript
+- [ ] SHA-256 Fingerabdruck aus Play Console geholt (ohne Doppelpunkte!)
+- [ ] Intent-Filter in `app.json` oder `AndroidManifest.xml`
+- [ ] `autoVerify: true` gesetzt
+- [ ] Website deployed
+- [ ] assetlinks.json erreichbar und liefert `application/json`
+- [ ] `versionCode` erhöht
+- [ ] Neue App-Version gebaut und hochgeladen
+- [ ] Deep Links im Play Console verifiziert
+
+#### Referenzen
+
+- [Android App Links Guide](https://developer.android.com/training/app-links)
+- [Digital Asset Links](https://developer.android.com/training/app-links/verify-android-applinks)
+- [Expo Intent Filters](https://docs.expo.dev/guides/linking/#android-app-links)
+- [TWA Deep Links](https://developer.chrome.com/docs/android/trusted-web-activity/)
+
+**Beispiel-Projekte:**
+- ✅ EnergyPriceGermany v1.2.1 - [assetlinks.json](https://s540d.github.io/Energy_Price_Germany/.well-known/assetlinks.json)
+- ✅ 1x1_Trainer v1.0.1 - [assetlinks.json](https://s540d.github.io/1x1_Trainer/.well-known/assetlinks.json)
+- ✅ Eisenhauer - [assetlinks.json](https://s540d.github.io/Eisenhauer/.well-known/assetlinks.json)
+
+**Status (Stand Nov 2025):**
+- ✅ EnergyPriceGermany v1.2.1 - Implementiert
+- ✅ 1x1_Trainer v1.0.1 - Implementiert & deployed
+- ✅ Eisenhauer - Implementiert
+
+---
+
 ## PWA & React Native Vorgaben
 
 ### Expo OTA Updates (Critical)
