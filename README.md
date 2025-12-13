@@ -67,6 +67,35 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
    - CI/CD Integration
    - Coverage Reports
 
+### Automation & CI/CD
+
+5.1 **automation-templates/** (NEU - Automatische Quality Checks)
+   - **scripts/init-automation.sh** - One-Command Setup für jedes Projekt
+   - **CI/CD Workflows** (GitHub Actions):
+     - ci-cd-react-native.yml - React Native + Web + Android
+     - ci-cd-web.yml - Web/PWA Projekte
+     - ci-cd-generic.yml - Generic Node.js Projekte
+   - **Pre-Commit Hooks** (Husky):
+     - Verhindert console.log in Production Code
+     - Validiert Platform.OS bei Web APIs
+     - Prüft Version-Konsistenz
+   - **Validation Scripts**:
+     - validate-release-react-native.sh
+     - validate-release-web.sh
+     - validate-release-generic.sh
+   - **Platform Utilities** (platform.ts)
+   - **Dokumentation**: AUTOMATION_SETUP.md, RELEASE_CHECKLIST.md
+
+5.2 **AUTOMATED_QUALITY_CHECKLIST.md**
+   - Komplette Checkliste aller automatisierten Quality Checks
+   - 90%+ Automatisierung für Code-Qualität
+   - Setup-Guide für Automatisierung
+   - Best Practices
+
+5.3 **QUICK_START.md**
+   - One-Command Setup: `cd Projekt && /path/to/init-automation.sh . && npm install`
+   - Schnelleinstieg für neue Projekte
+
 ### Deployment & Publishing
 
 6. **PUBLISHING_CHECKLIST.md**
@@ -178,34 +207,71 @@ vim .github/PULL_REQUEST_TEMPLATE/default.md
 
 ## Quick Start für neues Projekt
 
+### ⚡ Automatisches Setup (Empfohlen)
+
+**One-Command Setup** für sofortige Automatisierung:
+
+```bash
+# Wechsle ins Projektverzeichnis
+cd MeinProjekt
+
+# Führe das Automation-Setup aus
+/pfad/zu/project-templates/scripts/init-automation.sh .
+
+# Installiere Dependencies (inklusive Husky)
+npm install
+
+# Teste die Automatisierung
+npm run validate
+```
+
+Das Setup-Script erkennt automatisch deinen Projekttyp (React Native, Web, oder Generic) und richtet ein:
+- ✅ GitHub Actions CI/CD Pipeline
+- ✅ Pre-Commit Hooks (Husky)
+- ✅ Validation Script
+- ✅ Platform Utilities (bei React Native)
+- ✅ Dokumentation (AUTOMATION_SETUP.md, RELEASE_CHECKLIST.md)
+
+**Siehe auch:** [QUICK_START.md](QUICK_START.md) und [AUTOMATION_SUMMARY.md](AUTOMATION_SUMMARY.md)
+
+---
+
+### 📋 Manuelles Setup (wenn du mehr Kontrolle brauchst)
+
 1. **Technische Setup** - Lese `technische_vorgaben.md` für:
    - ESLint & Prettier Konfiguration
    - Vitest Setup
    - GitHub Actions Workflows
 
-2. **UX/Design Setup** - Nutze `ux-vorgaben.md` für:
+2. **Automation Setup** - Nutze `automation-templates/` für:
+   - CI/CD Pipeline (GitHub Actions)
+   - Pre-Commit Hooks (Husky)
+   - Validation Scripts
+   - Platform-Safe Utilities
+
+3. **UX/Design Setup** - Nutze `ux-vorgaben.md` für:
    - Color Palette definieren (CSS Variables)
    - Typography konfigurieren
    - Responsive Breakpoints setzen
    - Dark Mode implementieren
 
-3. **Komponenten** - Referenziere `design-system.md` für:
+4. **Komponenten** - Referenziere `design-system.md` für:
    - Button Komponenten
    - Form Elements
    - Modals und andere häufige Komponenten
 
-4. **Accessibility** - Checke `accessibility-guidelines.md` für:
+5. **Accessibility** - Checke `accessibility-guidelines.md` für:
    - WCAG 2.1 AA Compliance
    - Keyboard Navigation
    - Screen Reader Support
    - Color Contrast
 
-5. **Testing** - Implementiere Tests nach `testing-standards.md`:
+6. **Testing** - Implementiere Tests nach `testing-standards.md`:
    - Unit Tests (Vitest)
    - E2E Tests (Playwright)
    - 60%+ Coverage Ziel
 
-6. **Publishing** - Vor Release `PUBLISHING_CHECKLIST.md`:
+7. **Publishing** - Vor Release `PUBLISHING_CHECKLIST.md`:
    - Alle Checklisten durchgehen
    - Lighthouse Audit (80+)
    - Production Checks
@@ -251,6 +317,36 @@ Siehe [LABELS.md](LABELS.md) für standardisiertes, einfaches Label-System:
 ---
 
 ## Aktualisierungshistorie
+
+### Version 3.0 (Automation System) - Dezember 2025
+- ✅ **Komplettes Automation System** (90%+ automatisierte Quality Checks)
+- ✅ **automation-templates/** Verzeichnis mit:
+  - 3 CI/CD Workflows (React Native, Web, Generic)
+  - 3 Pre-Commit Hook Varianten
+  - 3 Validation Script Varianten
+  - Platform Utilities (platform.ts)
+  - ESLint Konfiguration
+- ✅ **scripts/init-automation.sh** - One-Command Setup für alle Projekttypen
+- ✅ **Neue Dokumentation:**
+  - AUTOMATION_SETUP.md - Setup-Guide
+  - RELEASE_CHECKLIST.md - Release-Checkliste
+  - AUTOMATED_QUALITY_CHECKLIST.md - Komplette Checkliste
+  - QUICK_START.md - Schnelleinstieg
+  - AUTOMATION_SUMMARY.md - Komplette Übersicht
+- ✅ **Automatische Erkennung** von React Native, Web und Generic Projekten
+- ✅ **Angewendet auf alle Projekte:**
+  - 1x1_Trainer (React Native)
+  - EnergyPriceGermany (React Native)
+  - Pflanzkalender (React Native)
+  - DrawFromMemory (React Native)
+  - Eisenhauer (Web/PWA)
+
+**Impact:**
+- Verhindert Platform-spezifische Bugs (window.matchMedia, localStorage)
+- Automatische Version-Konsistenz Checks
+- Pre-Commit Hooks für sofortiges Feedback
+- CI/CD Pipeline für jeden Push/PR
+- Security Audits automatisiert
 
 ### Version 2.2 (Labels)
 - ✅ Standardisiertes Label-System (9 Labels)
