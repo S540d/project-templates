@@ -96,6 +96,17 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
    - One-Command Setup: `cd Projekt && /path/to/init-automation.sh . && npm install`
    - Schnelleinstieg für neue Projekte
 
+5.4 **GitHub Branch Protection Rulesets** (NEU)
+   - **GITHUB_RULESETS.md** - Dokumentation für Branch Protection
+   - **github-ruleset-protect-main-react-native.json** - Ruleset für React Native Projekte
+   - **github-ruleset-protect-main-web.json** - Ruleset für Web/PWA Projekte
+   - **scripts/setup-branch-protection.sh** - Automatische Installation
+   - **Features**:
+     - Verhindert Force Pushes auf main
+     - Required Status Checks (code-quality, build-web)
+     - Admin Bypass für Hotfixes
+     - Einheitliche Rules über alle Projekte
+
 ### Deployment & Publishing
 
 6. **PUBLISHING_CHECKLIST.md**
