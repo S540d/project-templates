@@ -16,6 +16,159 @@ Allgemeine UX/UI Standards für konsistente, benutzerfreundliche Interfaces übe
 
 ---
 
+## 🎨 Moderne Design-Systeme (2024/2025)
+
+> **Neu hinzugefügt:** Drei moderne Design-Ansätze für zeitgemäße Apps
+
+### Option 1: "Soft & Modern" ⭐ **EMPFOHLEN**
+
+**Philosophie**: Warme, sanfte Ästhetik mit subtiler Tiefe und Eleganz
+
+#### Farbpalette
+- **Backgrounds**:
+  - Light: `#FAFAFA` (cremeweiß, nicht pures Weiß)
+  - Dark: `#0A0A0A` (dunkelgrau, nicht pures Schwarz)
+- **Surfaces**:
+  - Light: `#F5F5F5` → `#EFEFEF` (weicherer Kontrast)
+  - Dark: `#1A1A1A` → `#252525` (wärmere Töne)
+- **Schatten**: Weiche, mehrschichtige Elevation
+  - Small: `shadowOpacity: 0.08, shadowRadius: 8, elevation: 2`
+  - Medium: `shadowOpacity: 0.12, shadowRadius: 16, elevation: 4`
+  - Large: `shadowOpacity: 0.18, shadowRadius: 24, elevation: 8`
+
+#### Border & Spacing
+- **Border-Radius**:
+  - Cards: `16-20px` (statt 12px)
+  - Buttons: `12-16px`
+  - Small Elements: `8-10px`
+- **Margins**: 8px Grid-System beibehalten
+- **Padding**: Großzügiger (min. 16px für Cards)
+
+#### Visuelle Effekte
+- **Glassmorphism-Tooltips**:
+  ```tsx
+  backgroundColor: Platform.select({
+    web: 'rgba(255, 255, 255, 0.85)',
+    default: colors.surface
+  }),
+  backdropFilter: 'blur(10px)', // nur Web
+  shadowColor: '#000',
+  shadowOpacity: 0.15,
+  shadowRadius: 20,
+  ```
+
+- **Gradient-Accents** für wichtige Elemente:
+  ```tsx
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  // oder React Native: react-native-linear-gradient
+  ```
+
+- **Grid-Lines**:
+  - Gestrichelt statt solid: `strokeDasharray="4,8"`
+  - Opacity: `0.15` (statt 0.3)
+  - Weichere Farbe: `#D0D0D0` (Light), `#404040` (Dark)
+
+#### Interaktive Elemente
+- **Hover-States** (Web):
+  - Smooth Transition: `transition: all 0.2s ease`
+  - Subtle Scale: `transform: scale(1.02)`
+  - Brightness Shift: `filter: brightness(1.05)`
+
+- **Buttons**:
+  - Primary: Gradient oder Solid mit Schatten
+  - Secondary: Border mit Hover-Fill
+  - Ghost: Transparent mit Hover-Background
+
+#### Typography
+- **Font-Weights**:
+  - Headings: `600-700` (semibold-bold)
+  - Body: `400-500` (regular-medium)
+  - Labels: `500-600` (medium-semibold)
+- **Größen**: Skalierbar, min. 14px für Body Text
+
+---
+
+### Option 2: "Minimal & Clean"
+
+**Philosophie**: Reduktion auf das Wesentliche, maximale Klarheit
+
+#### Farbpalette
+- **Monochrome Base**: Grauskala mit einem Akzent
+  - Background: `#FFFFFF` / `#0D0D0D`
+  - Surface: Nur 2-3 Graustufen
+  - Accent: Eine kräftige Farbe (z.B. `#0066FF`)
+
+#### Layout-Prinzipien
+- **Mehr Whitespace**: Mindestens 24px zwischen Sections
+- **Dünne Linien**: `1px` statt `2px`, Opacity `0.1-0.2`
+- **Flache Hierarchie**: Maximal 2-3 Ebenen
+- **Card-Based**: Jeder Inhalt in separaten, leicht abgesetzten Cards
+
+#### Besonderheiten
+- **Floating Action Buttons**: Primäre Aktionen als FAB
+- **Icon-First**: Icons für schnelle Erkennung
+- **Minimale Schatten**: Nur `elevation: 1-2`
+
+**⚠️ Einschränkung**: Weniger geeignet für komplexe Datenvisualisierungen mit vielen Kategorien/Farben
+
+---
+
+### Option 3: "Glassmorphism & Modern"
+
+**Philosophie**: Transluzenz und Tiefe durch Blur-Effekte
+
+#### Visuelle Charakteristik
+- **Transluzente Cards**:
+  ```tsx
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  backdropFilter: 'blur(20px)',
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.2)'
+  ```
+
+- **Frosted Glass**: Hintergründe scheinen durch
+- **Leuchtende Akzente**: Neon-ähnliche Highlights
+- **Gradient-Overlays**: Farbverläufe überall
+
+#### Animationen
+- **Smooth Transitions**: `0.3-0.5s cubic-bezier`
+- **Micro-Interactions**: Subtile Reaktionen auf Inputs
+- **Parallax-Effekte**: Leichte Bewegung bei Scroll
+
+**⚠️ Einschränkung**:
+- Performance-intensiv auf älteren Geräten
+- Nur teilweise auf React Native umsetzbar (Web bevorzugt)
+- Kann von Inhalten ablenken
+
+---
+
+### 🎯 Empfehlungen nach Anwendungsfall
+
+| Anwendungsfall | Empfohlene Option | Begründung |
+|----------------|-------------------|------------|
+| **Daten-Apps** (Charts, Analytics) | **Option 1** | Balanciert Ästhetik und Funktionalität |
+| **Content-Apps** (News, Blogs) | Option 2 | Fokus auf Lesbarkeit |
+| **Portfolio/Showcase** | Option 3 | Wow-Effekt, visuell beeindruckend |
+| **Business/Professional** | Option 1 oder 2 | Seriös und modern |
+| **Creative/Artistic** | Option 3 | Experimentell und einzigartig |
+
+---
+
+### 🚀 Implementierungs-Checkliste
+
+- [ ] Theme-Farben aktualisieren (sanftere Palette)
+- [ ] Border-Radius erhöhen (16-20px für Cards)
+- [ ] Schatten hinzufügen (multi-layer elevation)
+- [ ] Grid-Lines modernisieren (gestrichelt, niedrigere opacity)
+- [ ] Tooltips mit Glassmorphism-Effekt
+- [ ] Hover-States für Web hinzufügen
+- [ ] Gradient-Accents für wichtige Elemente
+- [ ] Typography-Scale überprüfen
+- [ ] Spacing konsistent anwenden (8px Grid)
+- [ ] Transitions für Interaktionen (0.2s ease)
+
+---
+
 ## Farbpalette (Color System)
 
 ### Grundprinzipien
