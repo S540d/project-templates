@@ -2166,3 +2166,189 @@ eas update:list --branch production
 - [ ] Team-Dokumentation: OTA Update Workflow
 
 ---
+
+## Deployment-Strategie mit EAS Channels
+
+> **Ziel:** Klare Trennung zwischen Testing und Production für sichere, kontrollierte App-Releases
+
+### Problem ohne EAS Channels
+
+❌ **Unsicherer Workflow:**
+- Code auf `main` branch → sofort in Production sichtbar
+- Nur localhost-Tests vor Production Release
+- Keine echte Device-Tests auf Staging Umgebung
+- Keine Möglichkeit, User Testing vor Release durchzuführen
+- Überraschungen im App Store möglich
+
+### Lösung: EAS Channels + Staging App
+
+✅ **Sichere Trennung:**
+
+```
+Two separate apps in app stores:
+
+1. Production App
+   └─ Name: "App Name"
+   └─ Bundle ID: com.example.app
+   └─ Audience: End Users
+   └─ EAS Channel: production
+   └─ Distribution: App Store / Play Store
+
+2. Staging App (Beta)
+   └─ Name: "App Name - Beta"
+   └─ Bundle ID: com.example.app.beta
+   └─ Audience: Internal Testers
+   └─ EAS Channel: staging
+   └─ Distribution: TestFlight (iOS) / Internal Testing (Android)
+```
+
+### Development Workflow
+
+```
+1. Feature Branch
+   └─ npm run dev (localhost + emulator)
+
+2. Testing Branch
+   └─ Local testing on real devices
+
+3. Build & Test on Staging
+   └─ npm run build:staging
+   └─ Deploy to TestFlight/Internal Testing
+   └─ Real device testing (iOS/Android)
+   └─ User acceptance testing
+   └─ [Feedback? → zurück zu Feature Branch]
+
+4. Staging Validated ✅
+   └─ Merge to main branch
+
+5. Production Release
+   └─ npm run build:production
+   └─ App Store / Play Store Review
+   └─ Live for Users
+```
+
+### Configuration Files
+
+**eas.json:**
+```json
+{
+  "cli": {
+    "version": ">= 2.0.0"
+  },
+  "build": {
+    "production": {
+      "channel": "production",
+      "distribution": "store"
+    },
+    "staging": {
+      "channel": "staging",
+      "distribution": "internal"
+    }
+  },
+  "channels": {
+    "production": {
+      "publish": true
+    },
+    "staging": {
+      "publish": true
+    }
+  }
+}
+```
+
+**app.json (zusätzlich):**
+```json
+{
+  "expo": {
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/YOUR-PROJECT-ID"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR-PROJECT-ID"
+      }
+    }
+  }
+}
+```
+
+**package.json Scripts:**
+```json
+{
+  "scripts": {
+    "build:staging": "eas build --platform all --channel staging",
+    "build:production": "eas build --platform all --channel production",
+    "publish:staging": "expo publish --channel staging",
+    "publish:production": "expo publish --channel production"
+  }
+}
+```
+
+### Vorteile
+
+✅ **Testing vor Release**
+- Echte Device-Tests auf Staging App
+- User Acceptance Testing möglich
+- Bugs vor Production Release entdecken
+
+✅ **Kontrolle & Sicherheit**
+- Main branch = nur validierte Features
+- Staging = separate App von Production
+- Rollback möglich ohne neue App Store Version
+
+✅ **Automatisierung**
+- OTA Updates für Code-Änderungen
+- EAS Channels für automatische Bereitstellung
+- Keine manuellen Build-Prozesse
+
+✅ **Transparenz**
+- Klar wann Features live gehen
+- Dokumentierbare Release-Notes
+- Audit-Trail aller Deployments
+
+### Implementierungs-Schritte
+
+1. **EAS Configuration** (1-2 Stunden)
+   - `eas.json` erstellen
+   - `app.json` konfigurieren
+   - Build Scripts hinzufügen
+
+2. **Staging App Setup** (2-3 Stunden)
+   - Neue Bundle ID registrieren
+   - TestFlight (iOS) / Internal Testing (Android) konfigurieren
+   - Tester-Gruppen erstellen
+   - Invites verschicken
+
+3. **First Staging Build** (1 Stunde)
+   - `npm run build:staging` ausführen
+   - Auf TestFlight/Internal Testing deployen
+   - Auf echtem Device testen
+
+4. **Workflow Integration** (1-2 Stunden)
+   - Branch Protection Rules aktualisieren
+   - Release Checklist dokumentieren
+   - Team trainieren
+
+**Gesamtaufwand:** 5-8 Stunden (verteilt über mehrere Tage)
+
+### Best Practices
+
+✅ **Testing Protocol**
+- Alle Features auf Staging testen vor Main Merge
+- Mindestens 2 verschiedene Devices testen (iOS/Android)
+- User Testing auf Staging durchführen
+
+✅ **Release Management**
+- Version Nummern in app.json inkrementieren
+- CHANGELOG.md mit neuen Features aktualisieren
+- Neue Features dokumentieren vor Production
+
+✅ **Rollback Procedure**
+- Alte Channel Version kann schnell aktiviert werden
+- OTA Updates ermöglichen schnelle Fixes
+- Dokumentieren was bei Rollback zu tun ist
+
+---
