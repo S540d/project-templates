@@ -3,6 +3,10 @@
 
 Allgemeine UX/UI Standards für konsistente, benutzerfreundliche Interfaces über alle Projekte hinweg.
 
+> **Zuletzt aktualisiert:** 2025-12-22
+> **Wichtige Updates:** Settings Menu Struktur mit Feedback/Support/About in einer Zeile und About Modal wurden standardisiert
+> Siehe Abschnitt **"Settings Menu Content"** für Details
+
 ---
 
 ## Design Fundamentals
@@ -196,6 +200,215 @@ Allgemeine UX/UI Standards für konsistente, benutzerfreundliche Interfaces übe
 - **Large Text:** Mindestens 3:1 Kontrast
 - **UI Components:** Mindestens 3:1 für aktive Elemente
 - **Tools zur Überprüfung:** [Accessible Colors](https://accessible-colors.com/), [Contrast Ratio](https://contrast-ratio.com/)
+
+---
+
+## Theme-Aware Colors Architecture ⭐
+
+> **Pattern entdeckt und erfolgreich implementiert:** EnergyPriceGermany
+> **Anwendbar auf:** React Native / Expo Apps mit Tooltip-/Modal-Overlays
+
+### Problem (Anti-Pattern)
+
+❌ **Nicht empfohlen:** Komponenten mit einzelnen Farb-Strings
+```typescript
+// ❌ VERMEIDEN: Hardcoded Colors oder limitierte Props
+interface ChartProps {
+  backgroundColor: string;
+  textColor: string;
+  gridColor: string;
+}
+
+// Tooltip mit hardcoded Werten
+<View style={{
+  backgroundColor: Platform.OS === 'web'
+    ? (textColor === '#E8E8E8' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(250, 250, 250, 0.95)')
+    : backgroundColor,
+  borderColor: textColor,
+}}>
+  <Text style={{ color: textColor }}>...</Text>
+</View>
+```
+
+**Probleme:**
+- Tooltips/Overlays haben unzureichenden Kontrast in Licht/Dunkel-Modus-Kombinationen
+- Keine Zugriff auf das vollständige Theme System
+- Farben-Logik muss in jeder Komponente dupliziert werden
+- Änderungen am Theme-System erfordern Updates in vielen Dateien
+- Dark/Light Detection mit `textColor === '#E8E8E8'` ist fehleranfällig
+
+### Lösung: Theme-Aware Colors Pattern ✅
+
+**Empfohlen:** Komponenten erhalten das komplette `ThemeColors` Objekt
+
+#### 1. Theme Colors Typ definieren
+
+```typescript
+// utils/theme.ts
+export interface ThemeColors {
+  background: string;      // Main background color
+  surface: string;         // Card/Surface background
+  text: string;           // Primary text color
+  textSecondary: string;  // Secondary/dimmed text
+  primary: string;        // Primary accent color
+  gridLine: string;       // Grid lines, borders
+}
+```
+
+#### 2. Komponenten-Interface erweitern
+
+```typescript
+// components/MyChart.tsx
+import { ThemeColors } from '../../utils/theme';
+
+interface MyChartProps {
+  // ... existing props ...
+  backgroundColor: string;
+  textColor: string;
+  gridColor: string;
+
+  colors: ThemeColors;  // ← ADD THIS
+}
+
+export function MyChart({
+  // ... existing params ...
+  colors,  // ← ADD THIS
+}: MyChartProps) {
+```
+
+#### 3. Tooltips mit Theme-Aware Farben
+
+```typescript
+// Intelligente Tooltip-Hintergrund-Auswahl
+const tooltipBgColor = backgroundColor === colors.surface
+  ? colors.background
+  : colors.surface;
+
+return (
+  <View style={{
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: tooltipBgColor,  // ← Uses theme
+    borderWidth: 1,
+    borderColor: colors.gridLine,     // ← Uses theme
+    borderRadius: 10,
+  }}>
+    {/* Market Price */}
+    <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+      <Text style={{ color: colors.text, fontSize: 11 }}>
+        Börsenpreis:
+      </Text>
+      <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>
+        45,50 ¢
+      </Text>
+    </View>
+
+    {/* Grid Fees */}
+    <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+      <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+        + Netzentgelte:
+      </Text>
+      <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>
+        20,00 ¢
+      </Text>
+    </View>
+
+    {/* Divider */}
+    <View style={{
+      height: 1,
+      backgroundColor: colors.gridLine,
+      marginVertical: 6,
+      opacity: 0.5
+    }} />
+
+    {/* Total Price */}
+    <View style={{ flexDirection: 'row' }}>
+      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>
+        Endkunde:
+      </Text>
+      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>
+        65,50 ¢
+      </Text>
+    </View>
+  </View>
+);
+```
+
+#### 4. Parent-Komponente aktualisieren
+
+```typescript
+// App.tsx
+<MyChart
+  title="Preise"
+  backgroundColor={colors.surface}
+  textColor={colors.text}
+  gridColor={colors.gridLine}
+  colors={colors}  // ← Pass complete theme object
+/>
+```
+
+### Vorteile
+
+✅ **Single Source of Truth**
+- Alle Farben werden zentral im Theme System verwaltet
+- Änderungen betreffen automatisch alle Komponenten
+
+✅ **WCAG AA Compliance**
+- Automatische Light/Dark Mode Unterstützung
+- Tooltips haben immer korrekten Kontrast
+- Keine hardcoded Farb-Logik nötig
+
+✅ **Wartbarkeit**
+- Neues Theme? Nur Theme-Datei ändern
+- Keine Duplizierung von Farb-Logik
+- Konsistent über alle Komponenten
+
+✅ **Skalierbar**
+- Einfach neue Farben zum ThemeColors Interface hinzufügen
+- Automatisch in allen Komponenten verfügbar
+
+### Verwendete Semantic Colors
+
+**Für normale Inhalte:**
+- `colors.text` - Primärtext (sichtbar, hoher Kontrast)
+- `colors.textSecondary` - Sekundärtext (gedimmt, für Labels)
+- `colors.primary` - Akzent (Highlights, wichtige Werte)
+
+**Für Overlays (Tooltips, Modals):**
+- `colors.background` - Inverser Hintergrund zu Surface
+- `colors.surface` - Inverser Hintergrund zu Background
+- `colors.gridLine` - Borders, Divider
+
+**Intelligente Invertierung:**
+```typescript
+const tooltipBgColor = backgroundColor === colors.surface
+  ? colors.background
+  : colors.surface;
+```
+
+Dieser Ansatz sorgt dafür, dass der Tooltip-Hintergrund immer dem Kontrast des Hauptinhalts widerspricht, während der Text immer sichtbar bleibt.
+
+### Implementierungs-Checkliste
+
+- [ ] Theme Colors Interface definieren
+- [ ] Komponenten-Props mit `colors: ThemeColors` erweitern
+- [ ] Tooltip-Rendering mit Theme Colors aktualisieren
+- [ ] Parent-Komponente: `colors={colors}` prop hinzufügen
+- [ ] Light Mode testen
+- [ ] Dark Mode testen
+- [ ] Kontrast mit Accessibility-Tool überprüfen
+- [ ] Änderungen dokumentieren
+
+### Referenz-Implementierung
+
+Siehe EnergyPriceGermany Project:
+- **GitHub Commit:** [Apply theme-aware colors pattern](https://github.com/S540d/Energy_Price_Germany/commit/4f6e51c)
+- **Dateien:**
+  - `components/charts/PriceBarChart.tsx` - Reference tooltip implementation
+  - `components/charts/RenewableBarChart.tsx` - Theme colors example
+  - `components/charts/CorrelationScatterChart.tsx` - Tooltip using theme colors
+  - `App.tsx` - How to pass colors prop
+  - `utils/theme.ts` - ThemeColors interface definition
 
 ---
 
@@ -406,12 +619,16 @@ Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
 
 1. **Appearance Settings**
    - so schmal und kompakt wie möglich
-   - Theme Toggle (Dark / System)
-   - Toggle (deutsch/english)
+   - Theme Toggle: **Light, Dark, System** (3 Optionen)
+   - Language Toggle: English, Deutsch
    - jeweils: Buttons: Plain Text, kein Emoji; Active Button: Visuell deutlich markiert (z.B. andere Farbe)
-   
 
-2. **User Account Management** (nur wenn Benutzer-Anmeldung vorhanden)
+2. **App-spezifische Settings** (Optional, nur wenn sinnvoll)
+   - z.B. Operation (Addition/Multiplication), Difficulty Mode (Simple/Creative)
+   - Separate Sections mit Separators
+   - Gleiche Styling-Regeln wie Appearance
+
+3. **User Account Management** (nur wenn Benutzer-Anmeldung vorhanden)
    - Wenn eine Benutzeranmeldung implementiert ist (z.B. Google Sign-In, Apple Sign-In, etc.), **MUSS** ein "Sign Out" / "Abmelden"-Button in den Einstellungen vorhanden sein
    - Button-Text: "Sign Out" (EN) / "Abmelden" (DE)
    - Style: Primary color link oder destructive button style (rot/orange) je nach Design
@@ -419,21 +636,29 @@ Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
    - Action: Führt Abmeldung durch und zeigt Login-Screen
    - Sichtbarkeit: Nur sichtbar wenn Benutzer authentifiziert ist (nicht im Gastmodus)
 
-3. **Export** / Data Management**
+4. **Export / Data Management** (Optional)
    - Speichern in localStorage/AsyncStorage
    - Taste zum Export der Daten als Json-Daten (optional)
 
-4. **Feedback und Support**
-   - Single Link: "Send Feedback" mit Action: `mailto:feedback@example.com`
+5. **Feedback, Support & About - Unified Row**
+   - **KRITISCH:** Alle drei MÜSSEN in einer Zeile (flexbox row) stehen
+   - Gleich breite Buttons (flex: 1)
+   - **Feedback Link:** `mailto:devsven@posteo.de?subject=AppName Feedback`
+   - **Support Link:** `https://ko-fi.com/devsven`
+   - **About Button:** Öffnet Modal-Popup (nicht inline text!)
    - Plain Text, kein Emoji
-   - Single Link: "support me" zur URL `https://ko-fi.com/devsven`
-   - Plain Text, kein Emoji
+   - Separator davor und danach
 
-5. **About**
-   - "ABOUT" als Section Title (Uppercase)
-   - Version Info: "Version X.Y.Z"
-   - wenn externe Daten verwendet werden: Data Source Info 
-   - Lizenz der App: Open Source • MIT Lizenz, Keine kommerzielle Nutzung ohne Genehmigung
+6. **About Modal Popup**
+   - **Trigger:** "About" Button im Settings-Menü
+   - **Header:** "About" Title mit Close Button (✕)
+   - **Content:**
+     - Version: "Version X.Y.Z"
+     - wenn externe Daten: "Data Source: ..."
+     - License: "App License: MIT", "Keine kommerzielle Nutzung ohne Genehmigung"
+   - **Close:** Button oder ✕ Icon im Header
+   - **Modal-Style:** Centered, Max 512px width, semi-transparent backdrop
+   - **Animations:** Fade-in 200ms
 
 
 **Spezifikationen:**
@@ -441,7 +666,9 @@ Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
 - Separatoren zwischen Sections
 - Section Titles: Kleinbuchstaben, UPPERCASE, 12px, grau
 - Links: Primary Color (z.B. #667eea), Hover-State, Touch Target 44px+
-- Modal: Max 512px Width, Padding 16-24px, Close Button (×)
+- Modal: Max 512px Width, Padding 16-24px, Close Button (✕)
+- **Settings Button (⋮):** Text-Farbe für Kontrast zum Hintergrund (nicht Primary Color)
+- **Feedback/Support/About Row:** flex: 1 für gleich breite Buttons, borderTop zwischen Buttons
 
 **Beispiel (Web/PWA - HTML):**
 ```html
@@ -458,34 +685,50 @@ Das Settings-Menü muss folgende Struktur haben, in dieser Reihenfolge:
 
   <hr class="settings-separator">
 
-  <!-- Feedback -->
+  <!-- Language -->
   <div class="settings-section">
-    <a href="mailto:feedback@example.com" class="settings-link">Send Feedback</a>
+    <h4 class="section-title">LANGUAGE</h4>
+    <div class="language-toggle">
+      <button class="lang-btn active" data-lang="en">English</button>
+      <button class="lang-btn" data-lang="de">Deutsch</button>
+    </div>
   </div>
 
   <hr class="settings-separator">
 
-  <!-- About -->
-  <div class="settings-section">
-    <h4 class="section-title">ABOUT</h4>
-    <p>Version 1.0.0</p>
+  <!-- Feedback, Support & About in One Row -->
+  <div class="settings-section settings-section-row">
+    <a href="mailto:feedback@example.com" class="settings-link flex">Send Feedback</a>
+    <a href="https://ko-fi.com/devsven" target="_blank" class="settings-link flex">support me</a>
+    <button onclick="openAboutModal()" class="settings-link flex">About</button>
   </div>
+</div>
 
-  <hr class="settings-separator">
-
-  <!-- Support -->
-  <div class="settings-section">
-    <a href="https://ko-fi.com/devsven" target="_blank" class="settings-link">
-      support me
-    </a>
+<!-- About Modal -->
+<div id="aboutModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="closeAboutModal()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>About</h3>
+      <button class="modal-close" onclick="closeAboutModal()">✕</button>
+    </div>
+    <p class="modal-text">Version 1.0.0</p>
+    <p class="modal-info-text">App License: MIT | Keine kommerzielle Nutzung ohne Genehmigung</p>
+    <button class="modal-button" onclick="closeAboutModal()">OK</button>
   </div>
 </div>
 ```
 
 **Beispiel (React Native - TypeScript):**
 ```typescript
-const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('system');
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, Linking } from 'react-native';
 
+const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('system');
+const [aboutVisible, setAboutVisible] = useState(false);
+const APP_VERSION = '1.0.0';
+
+// Appearance Section
 const renderAppearanceSection = () => (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>APPEARANCE</Text>
@@ -499,7 +742,7 @@ const renderAppearanceSection = () => (
           ]}
           onPress={() => setThemeMode(mode)}
         >
-          <Text style={styles.themeButtonText}>
+          <Text style={[styles.themeButtonText, themeMode === mode && styles.themeButtonTextActive]}>
             {mode.charAt(0).toUpperCase() + mode.slice(1)}
           </Text>
         </TouchableOpacity>
@@ -507,6 +750,129 @@ const renderAppearanceSection = () => (
     </View>
   </View>
 );
+
+// Feedback, Support & About - Unified Row
+const renderFeedbackRow = () => (
+  <View style={styles.feedbackRow}>
+    <TouchableOpacity
+      style={styles.feedbackButton}
+      onPress={() => Linking.openURL('mailto:feedback@example.com')}
+    >
+      <Text style={styles.feedbackButtonText}>Send Feedback</Text>
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.feedbackButton}
+      onPress={() => Linking.openURL('https://ko-fi.com/devsven')}
+    >
+      <Text style={styles.feedbackButtonText}>support me</Text>
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.feedbackButton}
+      onPress={() => setAboutVisible(true)}
+    >
+      <Text style={styles.feedbackButtonText}>About</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+// About Modal
+const renderAboutModal = () => (
+  <Modal visible={aboutVisible} transparent animationType="fade">
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>About</Text>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setAboutVisible(false)}
+          >
+            <Text style={styles.modalCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.modalText}>Version {APP_VERSION}</Text>
+        <Text style={styles.modalInfoText}>App License: MIT | Keine kommerzielle Nutzung ohne Genehmigung</Text>
+        <TouchableOpacity
+          style={styles.modalButton}
+          onPress={() => setAboutVisible(false)}
+        >
+          <Text style={styles.modalButtonText}>OK</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Modal>
+);
+
+// Styles
+const styles = StyleSheet.create({
+  feedbackRow: {
+    flexDirection: 'row',
+    marginVertical: 8,
+  },
+  feedbackButton: {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  feedbackButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#667eea',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    maxWidth: 512,
+    width: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalCloseText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalInfoText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalButton: {
+    backgroundColor: '#667eea',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+});
 ```
 
 **Store Compliance:**
