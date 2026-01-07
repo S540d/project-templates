@@ -1,4 +1,13 @@
-# Design Guidelines - Support Links & Store Compliance
+# ⚠️ Design Guidelines - Support Links & Store Compliance
+
+> **STATUS:** Diese Datei wird in [ux-vorgaben.md → Store Compliance & Design Guidelines](ux-vorgaben.md#store-compliance--design-guidelines) konsolidiert.
+>
+> **Bitte verwende stattdessen:**
+> - [ux-vorgaben.md → Store Compliance & Design Guidelines](ux-vorgaben.md#store-compliance--design-guidelines) - Support Links, i18n, Viralität
+> - [ux-vorgaben.md → Internationalisierung (i18n)](ux-vorgaben.md#internationalisierung-i18n) - Text Handling
+> - Diese Datei bleibt als **historische Referenz** verfügbar
+
+---
 
 **Projekt-übergreifende Designvorgaben für alle S540d Apps**
 

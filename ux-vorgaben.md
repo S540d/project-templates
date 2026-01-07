@@ -3,8 +3,9 @@
 
 Allgemeine UX/UI Standards für konsistente, benutzerfreundliche Interfaces über alle Projekte hinweg.
 
-> **Zuletzt aktualisiert:** 2025-12-26
+> **Zuletzt aktualisiert:** 2026-01-07
 > **Hinweis:** Technische Implementierungsdetails (Android Edge-to-Edge, OTA Updates, App Links, etc.) finden sich in [technische_vorgaben.md](technische_vorgaben.md)
+> **Konsolidierung:** Diese Datei integriert nun auch Inhalte aus design-system.md und DESIGN_GUIDELINES.md für eine einheitliche UX-Dokumentation
 
 ---
 
@@ -662,9 +663,330 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 
 ---
 
+## Komponenten Standards - UI Components Katalog
+
+> Diese Sektion wurde konsolidiert aus [design-system.md](design-system.md). Siehe dortige Datei für detaillierte Code-Beispiele.
+
+### Button
+
+#### Typen & Größen
+- **Primary Button:** Brand Color, für Hauptaktionen (Save, Submit, Create)
+- **Secondary Button:** Grau Border, für Sekundäraktionen (Cancel, More Options)
+- **Danger Button:** Rot (#ef4444), für destruktive Aktionen (Delete, Remove)
+- **Größen:** Small (32px), Medium (40px), Large (48px)
+- **Minimum:** 44px × 44px für Touch Target (WCAG)
+
+#### States & Verhalten
+- **Default:** Normale Zustand
+- **Hover:** Dunklere Variante oder Schatten
+- **Active:** Gedrückter Effekt
+- **Disabled:** 50% Opacity, cursor: not-allowed
+- **Loading:** Spinner + "Loading..." Text
+
+#### Mit Icons
+- Icon nur: Muss `aria-label` haben
+- Icon + Text: Icon links, Text rechts mit 8px Gap
+- Min. height: 40px
+
+### Input / Form Elements
+
+#### Text Input, Textarea, Select, Checkbox, Radio
+- **Größe:** 40-44px Height (Touch-friendly)
+- **Padding:** 8-12px
+- **Border:** 1px solid, 4-6px border-radius
+- **Focus State:** Visible Focus Ring (min. 2px, 2px offset)
+- **Label:** Immer vorhanden, über Input, `for` Attribut verknüpft
+- **Error State:** Rote Border + Error Message unter Input
+- **Disabled State:** 50% Opacity, cursor: not-allowed
+
+#### Best Practices
+- Labels müssen `for` Attribut haben (für Screen Reader)
+- Error Messages mit `aria-describedby` verknüpfen
+- Required Fields mit `required` Attribut + visueller Indikator (*)
+- Fieldset + Legend für Gruppen (Radio, Checkbox)
+
+### Card
+
+- **Padding:** 16px - 24px
+- **Border:** 1px solid (#e5e7eb) oder Box-Shadow
+- **Border-Radius:** 8px - 12px
+- **Spacing:** 16px - 24px zwischen Cards
+- **Varianten:** Mit Image, Header, Footer, nur Body
+- **Shadow (Soft & Modern):**
+  - Small: opacity 0.08, radius 8px
+  - Medium: opacity 0.12, radius 16px
+  - Large: opacity 0.18, radius 24px
+
+### Modal / Dialog
+
+- **Width:** 90vw max 512px (mobile), 600px (desktop)
+- **Padding:** 24px - 32px
+- **Header:** Bold, 18px - 20px Font
+- **Close Button:** X Icon, top-right, 44px × 44px minimum
+- **Backdrop:** Dunkelgrau mit 70% Opacity
+- **Animation:** Fade-in (200ms), Slide-up (300ms)
+- **Accessibility:**
+  - Focus trap (Tab-Navigation bleibt im Modal)
+  - Escape schließt Modal
+  - role="dialog" mit aria-labelledby
+
+### Tabs
+
+- **Header:** Flexbox, Border-bottom
+- **Tab Button:** 44px+ height, Keyboard Navigation (Arrow Keys)
+- **Active State:** Highlight + Border-bottom
+- **Content:** role="tabpanel" mit aria-labelledby
+
+### Alert / Toast Notifications
+
+- **Position:** Top-right (Desktop), Top-Center (Mobile)
+- **Width:** Max 400px
+- **Types:** Success (grün), Error (rot), Warning (gelb), Info (blau)
+- **Duration:** 3-5 Sekunden sichtbar, Auto-dismiss oder Close-Button
+- **Icon:** Visual Indicator (✓, ✕, ⚠, ℹ)
+- **Animation:** Slide-in from right (300ms)
+
+### Spinner / Loading
+
+- **Size:** 20-24px (Standard), skalierbar
+- **Animation:** Rotation 600ms linear infinite
+- **Color:** Primary color
+- **Usage:** In Buttons, als Page Spinner, oder Skeleton Screen
+- **Text:** "Loading..." oder "Saving..." daneben
+
+### Badge
+
+- **Padding:** 4px 12px (0.25rem 0.75rem)
+- **Border-Radius:** 9999px (vollständig rund)
+- **Font-Size:** 12px (0.75rem)
+- **Font-Weight:** 600
+- **Variants:** Primary, Success, Warning, Danger
+- **Usage:** Status-Indikator, Kategorien, neue Features
+
+### Komponenten Checkliste
+
+- [ ] Semantisches HTML (button, form, dialog, etc.)
+- [ ] Keyboard Navigation (Tab, Enter, Escape, Arrow Keys)
+- [ ] Focus Styles sichtbar (2px outline, 2px offset)
+- [ ] ARIA Labels wo nötig
+- [ ] Loading States
+- [ ] Disabled States
+- [ ] Error States mit Meldungen
+- [ ] Touch-freundliche Größen (min. 44px)
+- [ ] Mobile & Desktop responsive
+- [ ] Dark Mode kompatibel
+- [ ] Dokumentiert mit Code-Beispielen
+
+---
+
+## Store Compliance & Design Guidelines
+
+> Diese Sektion wurde konsolidiert aus [DESIGN_GUIDELINES.md](DESIGN_GUIDELINES.md)
+
+### Support-Link Platzierung
+
+**✅ EMPFOHLEN: Settings/About-Menü Integration**
+- Support-Link gehört im Settings/About-Menü, nicht im Footer
+- NICHT als "In-App-Werbung" interpretierbar (Professional Standard)
+- Vergleichbar mit GitHub Sponsors, Patreon in Open Source Apps
+- Explizit freiwillig, nicht aufdringlich
+
+**❌ NICHT ERLAUBT: Footer mit direktem Support-Link**
+- Zu prominent, könnte als Werbung interpretiert werden
+- Play Store könnte "Contains Ads" fälschlicherweise ankreuzen müssen
+
+### Standardisierte Settings/About-Menü Struktur
+
+```
+⚙️ Settings / About
+
+📊 App Settings
+  ├─ 🌓 Theme (Light/Dark/System)
+  ├─ 📱 Language
+  └─ 🔔 Notifications (falls relevant)
+
+ℹ️ About
+  ├─ 📱 Version X.Y.Z
+  ├─ 📜 Privacy Policy
+  ├─ 📄 Open Source License (MIT)
+  └─ 🔗 GitHub Repository
+
+💝 Support
+  ├─ 💝 Support the Project / Support Development
+  ├─ 📤 Share this App
+  ├─ ⭐ Rate on Play Store/App Store
+  └─ 🐛 Report a Bug (GitHub Issues)
+```
+
+**Text-Formulierung:**
+- ✅ "Support the Project" / "Support Development"
+- ✅ "Buy Me a Coffee ☕"
+- ❌ NICHT: "Support me" (zu persönlich)
+- ❌ NICHT: "Donate" (klingt wie Charity)
+- ❌ NICHT: "Premium" (klingt wie In-App Purchase)
+
+### Store Compliance - Ads Angabe
+
+**Google Play Store & Apple App Store:**
+```
+"Contains Ads": ❌ NO - App enthält keine Werbung
+```
+
+**Begründung:**
+- Support-Link im Settings-Menü = KEINE Werbung
+- Keine Ad-SDKs (AdMob, Facebook Ads, etc.)
+- Keine Tracking-Cookies für Monetarisierung
+- Freiwillige Unterstützung ≠ Werbung
+
+**Data Safety (Google Play):**
+- Ad SDK Usage: None
+- Third-party advertising: No
+- Personal data collected for advertising: No
+
+### Internationalisierung (i18n) - Kein hartcodierter Text
+
+**REGEL: Alle sichtbaren Texte MÜSSEN über das Übersetzungssystem laufen.**
+
+#### ❌ NICHT erlaubt
+```tsx
+<Text>Settings</Text>
+<Text>Open Source • MIT</Text>
+```
+
+#### ✅ EMPFOHLEN
+```tsx
+<Text>{t.settings}</Text>
+<Text>{t.appLicense}</Text>
+```
+
+#### Ausnahmen (darf hartcodiert bleiben)
+- ✅ **App-Name** (z.B. "Energy Price Germany")
+- ✅ **Technische Bezeichnungen** (z.B. "Energy Charts", "API", "GitHub")
+- ✅ **Versionsnummern** (z.B. "1.2.0")
+- ✅ **URLs und E-Mail-Adressen**
+- ✅ **Emojis** (universell verständlich)
+
+#### Translations-Struktur
+```tsx
+const translations = {
+  en: {
+    settings: 'Settings',
+    appLicense: 'Open Source • MIT',
+    // ... weitere englische Texte
+  },
+  de: {
+    settings: 'Einstellungen',
+    appLicense: 'Open Source • MIT',
+    // ... weitere deutsche Texte
+  },
+};
+```
+
+### Viralität & Growth: Share-Button Standard
+
+**REGEL: Jede App sollte einen Share-Button im Settings-Menü haben.**
+
+#### ✅ Standardimplementierung (React Native/Expo)
+
+```tsx
+import { Share, Platform } from 'react-native';
+
+const shareApp = async () => {
+  try {
+    const appName = 'Energy Price Germany'; // App-spezifisch
+    const benefit = 'Spare Geld mit Echtzeit-Strompreisen!'; // App-spezifisch
+    const storeUrl = Platform.select({
+      ios: 'https://apps.apple.com/app/...',
+      android: 'https://play.google.com/store/apps/details?id=...',
+      web: window.location.origin,
+    });
+
+    const result = await Share.share({
+      message: `🚀 ${appName} - ${benefit}\n\n⬇️ Kostenloser Download:\n${storeUrl}?utm_source=share&utm_medium=app`,
+      title: `Empfehlung: ${appName}`,
+    });
+
+    if (result.action === Share.sharedAction) {
+      console.log('App shared successfully');
+    }
+  } catch (error) {
+    console.error('Error sharing app:', error);
+  }
+};
+```
+
+#### Settings-Menü Integration
+```tsx
+// Im Settings/About-Menü unter "SUPPORT" platzieren:
+<TouchableOpacity onPress={shareApp} style={styles.menuLink}>
+  <Text style={[styles.legendText, { color: colors.primary }]}>
+    {t.shareApp}
+  </Text>
+</TouchableOpacity>
+```
+
+#### UTM-Parameter für Tracking
+```
+?utm_source=share&utm_medium=app&utm_campaign=organic
+```
+
+**Tracking-Tools (Privacy-konform):**
+- ✅ Plausible Analytics (DSGVO-konform, kein Cookie-Banner)
+- ✅ Google Analytics (mit Consent-Banner)
+- ❌ Keine personenbezogenen Daten tracken
+
+#### App-spezifische Share-Texte
+
+**Energy Price Germany:**
+```
+"🚀 Energy Price Germany - Spare Geld mit Echtzeit-Strompreisen!
+
+⬇️ Kostenloser Download:
+[Store-Link]?utm_source=share&utm_medium=app"
+```
+
+**Best Practices:**
+1. ✅ Share-Button nicht zu prominent (wirkt nicht verzweifelt)
+2. ✅ In Settings unter "Support" platzieren
+3. ✅ Kurzer, prägnanter Share-Text (max. 2-3 Zeilen + Link)
+4. ✅ UTM-Parameter für Tracking
+5. ✅ Emoji nutzen (fallen auf, aber sparsam)
+6. ❌ NICHT nach jeder App-Nutzung zum Teilen auffordern
+7. ❌ NICHT mit Belohnungen incentivieren (Play Store Policy)
+
+---
+
+## Plattform-spezifische Implementierungen
+
+### Android Edge-to-Edge (Android 15+)
+
+> Detaillierte Android UX Guidelines: [ANDROID-UX-GUIDELINES.md](ANDROID-UX-GUIDELINES.md)
+
+**Kritische Anforderungen:**
+- **enableEdgeToEdge()** in MainActivity (empfohlen)
+- **Material Components** >= 1.13.0
+- **compileSdk/targetSdk:** 36+
+- **themes.xml:** Transparente System Bars
+- Separate Dark Mode Themes
+
+### Web (React Native Web / Standard Web)
+
+- Responsive Breakpoints: 320px, 768px, 1024px, 1280px, 1536px
+- CSS Variables für Theme-Wechsel
+- Media Queries für Dark Mode: `prefers-color-scheme`
+- Hover-States mit `@media (hover: hover)`
+
+---
+
 ## Referenzen
 
 - [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
 - [Material Design 3](https://m3.material.io/)
 - [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
 - [Web Content Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Android Edge-to-Edge Documentation](https://developer.android.com/develop/ui/views/layout/edge-to-edge)
+- **Related Template Files:**
+  - [design-system.md](design-system.md) - Komponenten-Katalog (detaillierte Code-Beispiele)
+  - [DESIGN_GUIDELINES.md](DESIGN_GUIDELINES.md) - Store Compliance & i18n (Archiviert)
+  - [ANDROID-UX-GUIDELINES.md](ANDROID-UX-GUIDELINES.md) - Android 15+ Best Practices
+  - [accessibility-guidelines.md](accessibility-guidelines.md) - ⚠️ DEPRECATED (siehe Barrierefreiheit oben)

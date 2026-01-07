@@ -1,7 +1,11 @@
 ---
-# Design System - Komponenten Katalog
+# ⚠️ Design System - Komponenten Katalog
 
-Wiederverwendbare UI-Komponenten mit Standards für Design, Markup und Verhalten.
+> **STATUS:** Diese Datei wird in [ux-vorgaben.md → Komponenten Standards](ux-vorgaben.md#komponenten-standards---ui-components-katalog) konsolidiert.
+>
+> **Bitte verwende stattdessen:**
+> - [ux-vorgaben.md → Komponenten Standards](ux-vorgaben.md#komponenten-standards---ui-components-katalog) - Zusammenfassung aller Komponenten
+> - Diese Datei bleibt als **Referenz für detaillierte Code-Beispiele** verfügbar
 
 ---
 
