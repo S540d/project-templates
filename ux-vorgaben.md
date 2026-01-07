@@ -41,12 +41,16 @@ Allgemeine UX/UI Standards für konsistente, benutzerfreundliche Interfaces übe
   - Large: `shadowOpacity: 0.18, shadowRadius: 24, elevation: 8`
 
 #### Border & Spacing
-- **Border-Radius**:
-  - Cards: `16-20px` (statt 12px)
-  - Buttons: `12-16px`
+- **Border-Radius** (Material 3 Standard):
+  - Primary Buttons: `28px` (hochgerundet)
+  - Secondary Buttons: `20px` (gerundet)
+  - Cards: `20-24px`
+  - Answer/Input Boxes: `16px`
+  - Settings Menu: `20px`
   - Small Elements: `8-10px`
 - **Margins**: 8px Grid-System beibehalten
 - **Padding**: Großzügiger (min. 16px für Cards)
+- **Button Borders (Outlined):** `2px solid`
 
 #### Visuelle Effekte
 - **Glassmorphism-Tooltips**:
@@ -499,28 +503,77 @@ Basiere alle Abstände auf 8px Inkremente:
      - License: "App License: MIT", "Keine kommerzielle Nutzung ohne Genehmigung"
    - **Modal-Style:** Centered, Max 512px width, semi-transparent backdrop
 
-### Design Token Spezifikation - Settings Menu
+### Design Token Spezifikation - Settings Menu (Material 3 Standard)
 
+#### Buttons - Material 3 Style
+
+**Theme Toggle Buttons (Outlined):**
+- Style: Outlined Button, 3 gleich breite Buttons
+- Border-Radius: `20px` (Material 3)
+- Border: `2px solid`
+- Active State: Filled mit Primary Color, Radius `20px`
+- Padding: `8px vertical × 16px horizontal`
+- Height: `40px` (Touch-friendly)
+
+**Feedback/Support/About Buttons (Outlined):**
+- Alle 3 in einer Zeile mit `flex: 1`
+- Style: Outlined Button
+- Border-Radius: `20px`
+- Border: `2px solid`
+- Padding: `8px vertical × 16px horizontal`
+- Height: `40px` (Touch-friendly)
+
+#### Colors (Theme-Aware)
 ```css
-/* Colors */
---settings-bg: #ffffff (light) / #1f2937 (dark)
---settings-text: #111827 (light) / #f3f4f6 (dark)
---settings-text-secondary: #6b7280 (light) / #9ca3af (dark)
---settings-border: #e5e7eb (light) / #374151 (dark)
---settings-primary: #667eea (primary color)
---settings-button-bg: #f5f5f5 (light) / #374151 (dark)
---settings-button-active: #667eea
+/* Light Mode */
+--settings-bg: #FAFAFA
+--settings-surface: #EFEFEF
+--settings-text: #111827
+--settings-text-secondary: #6b7280
+--settings-border: #D0D0D0
+--settings-primary: #667eea
+--settings-button-outlined-border: #E0E0E0
+--settings-button-outlined-text: #111827
+--settings-button-active-bg: #667eea
 --settings-button-active-text: #ffffff
 
-/* Typography */
---settings-title-size: 18px
---settings-section-title-size: 12px
---settings-section-title-case: uppercase
+/* Dark Mode */
+--settings-bg-dark: #0A0A0A
+--settings-surface-dark: #252525
+--settings-text-dark: #f3f4f6
+--settings-text-secondary-dark: #9ca3af
+--settings-border-dark: #404040
+--settings-button-outlined-border-dark: #404040
+--settings-button-outlined-text-dark: #f3f4f6
+```
 
-/* Spacing */
---settings-modal-padding: 16px
---settings-button-height: 40px
---settings-button-border-radius: 6px
+#### Typography (Material 3)
+```css
+--settings-title-size: 18px
+--settings-title-weight: 600
+--settings-section-title-size: 12px
+--settings-section-title-weight: 600
+--settings-section-title-case: uppercase
+--settings-button-text-size: 14px
+--settings-button-text-weight: 500
+```
+
+#### Spacing (Material 3 8px Grid)
+```css
+--settings-modal-padding: 24px
+--settings-section-padding: 16px
+--settings-button-group-gap: 8px
+--settings-item-spacing: 12px
+--settings-separator-margin: 16px 0
+```
+
+#### Shadows (Soft & Modern)
+```css
+/* Outlined Buttons - no shadow */
+/* Filled Buttons when active - Medium elevation */
+shadowOpacity: 0.12;
+shadowRadius: 16px;
+elevation: 4;
 ```
 
 ### Verifikationscheckliste
@@ -669,12 +722,32 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 
 ### Button
 
-#### Typen & Größen
-- **Primary Button:** Brand Color, für Hauptaktionen (Save, Submit, Create)
-- **Secondary Button:** Grau Border, für Sekundäraktionen (Cancel, More Options)
-- **Danger Button:** Rot (#ef4444), für destruktive Aktionen (Delete, Remove)
-- **Größen:** Small (32px), Medium (40px), Large (48px)
-- **Minimum:** 44px × 44px für Touch Target (WCAG)
+#### Material 3 Design Standard
+
+**Filled Buttons** (Primäre Aktionen):
+- Vollständiger Background-Fill mit Theme Color
+- Border-Radius: `28px`
+- Für primäre CTAs: Check, Next, Submit, Create
+- Elevation/Schatten: Medium (shadowOpacity: 0.12, shadowRadius: 16)
+- Padding: 8px (vertikal) × 16px (horizontal)
+
+**Outlined Buttons** (Sekundäre Aktionen):
+- Transparent Background, `2px solid` Border
+- Border-Radius: `20px`
+- Für wiederholte/sekundäre Aktionen: Numpad, Toggles, Settings, Multiple Choice
+- Border Color: Theme-aware (`colors.border`, `colors.textSecondary`)
+- Keine Elevation/Schatten
+- Padding: 8px (vertikal) × 16px (horizontal)
+
+**Danger Button:**
+- Rot (#ef4444), für destruktive Aktionen (Delete, Remove)
+- Filled Style mit rotem Background
+
+#### Größen
+- **Small:** 32px Height
+- **Medium:** 40px Height (Standard)
+- **Large:** 48px Height
+- **Minimum Touch Target:** 44px × 44px (WCAG)
 
 #### States & Verhalten
 - **Default:** Normale Zustand
@@ -687,6 +760,32 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 - Icon nur: Muss `aria-label` haben
 - Icon + Text: Icon links, Text rechts mit 8px Gap
 - Min. height: 40px
+
+#### Implementierung (React Native/Expo)
+```tsx
+// Outlined Button mit Theme-Aware Styles
+<NumpadButton
+  colors={colors}
+  style={[
+    styles.numpadButton,
+    {
+      borderColor: colors.border,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderRadius: 20,
+    }
+  ]}
+/>
+
+// Filled Button
+<PrimaryButton
+  style={{
+    backgroundColor: colors.primary,
+    borderRadius: 28,
+    elevation: 4,
+  }}
+/>
+```
 
 ### Input / Form Elements
 
