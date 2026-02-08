@@ -627,17 +627,200 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 
 ## Internationalisierung (i18n)
 
+### Automatische Spracherkennung (PFLICHT)
+
+**KRITISCH:** Alle Apps MÜSSEN automatische Spracherkennung implementieren. Nutzer sollten ihre Sprache NICHT manuell wählen müssen.
+
+#### Warum automatisch?
+- **Bessere UX:** Nutzer sieht sofort die richtige Sprache beim ersten Start
+- **Weniger Friction:** Keine manuelle Auswahl-Schritt
+- **Erwartung:** Standard in modernen Apps (Google, Apple Apps, etc.)
+- **Accessibility:** Nutzer mit Sehbehinderung können Settings oft nicht finden
+
+#### Implementation-Standard
+1. **Beim App-Start:** Erkenne Device/Browser Sprache automatisch
+2. **Manual Override:** Biete Settings-Option für manuelle Sprachwahl
+3. **Persistierung:** Speichere manuelle Auswahl in AsyncStorage/localStorage
+4. **Fallback:** Nutze Englisch wenn Device-Sprache nicht unterstützt ist
+
+#### Code-Beispiel (React Native/Expo)
+```typescript
+import * as Localization from 'expo-localization';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+type Language = 'en' | 'de';
+
+const useLanguage = () => {
+  const detectDeviceLanguage = (): Language => {
+    const deviceLang = Localization.locale.split('-')[0]; // 'de-DE' -> 'de'
+    return ['en', 'de'].includes(deviceLang) ? deviceLang as Language : 'en';
+  };
+
+  const [language, setLanguage] = useState<Language>(detectDeviceLanguage());
+
+  // Load saved preference on mount
+  useEffect(() => {
+    AsyncStorage.getItem('language').then((saved) => {
+      if (saved && ['en', 'de'].includes(saved)) {
+        setLanguage(saved as Language);
+      }
+    });
+  }, []);
+
+  // Persist language changes
+  const changeLanguage = (newLang: Language) => {
+    setLanguage(newLang);
+    AsyncStorage.setItem('language', newLang);
+  };
+
+  return { language, changeLanguage };
+};
+```
+
+#### Code-Beispiel (Web)
+```javascript
+// utils/language.js
+export const detectLanguage = () => {
+  // 1. Check localStorage for saved preference
+  const saved = localStorage.getItem('language');
+  if (saved && ['en', 'de'].includes(saved)) {
+    return saved;
+  }
+
+  // 2. Detect browser language
+  const browserLang = navigator.language.split('-')[0]; // 'de-DE' -> 'de'
+  return ['en', 'de'].includes(browserLang) ? browserLang : 'en';
+};
+
+export const setLanguage = (lang) => {
+  localStorage.setItem('language', lang);
+  window.location.reload(); // Re-render with new language
+};
+```
+
+#### Settings UI Pattern
+```tsx
+// Settings Menu - Language Toggle (Material 3 Style)
+<View style={styles.languageSection}>
+  <Text style={styles.sectionTitle}>{t.language}</Text>
+  <View style={styles.buttonGroup}>
+    <TouchableOpacity
+      style={[
+        styles.languageButton,
+        language === 'en' && styles.languageButtonActive
+      ]}
+      onPress={() => changeLanguage('en')}
+    >
+      <Text style={[
+        styles.buttonText,
+        language === 'en' && styles.buttonTextActive
+      ]}>
+        English
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.languageButton,
+        language === 'de' && styles.languageButtonActive
+      ]}
+      onPress={() => changeLanguage('de')}
+    >
+      <Text style={[
+        styles.buttonText,
+        language === 'de' && styles.buttonTextActive
+      ]}>
+        Deutsch
+      </Text>
+    </TouchableOpacity>
+  </View>
+</View>
+```
+
+#### Best Practices
+- ✅ **Automatisch beim ersten Start** - Nutze Device/Browser Sprache
+- ✅ **Manual Override möglich** - Settings-Option für manuelle Wahl
+- ✅ **Persistierung** - Speichere Änderungen dauerhaft
+- ✅ **Text-Labels** - "English", "Deutsch" (keine Flaggen!)
+- ✅ **Fallback** - Englisch als Default wenn Sprache nicht unterstützt
+- ✅ **Reload/Rerender** - UI aktualisiert sich nach Sprachwechsel
+
+#### Anti-Patterns
+- ❌ **Manuelle Sprachwahl beim ersten Start** - Friction für Nutzer
+- ❌ **Keine Persistierung** - Nutzer muss bei jedem Start neu wählen
+- ❌ **Flaggen als Sprach-Symbole** - Politisch problematisch (EN ≠ UK/US)
+- ❌ **Hartcodierte Sprache** - App immer auf Englisch
+- ❌ **Keine automatische Erkennung** - Nutzer erwartet moderne UX
+
+#### Checkliste
+- [ ] Automatische Spracherkennung beim App-Start implementiert
+- [ ] Manual Override in Settings verfügbar
+- [ ] Sprach-Präferenz wird persistiert (AsyncStorage/localStorage)
+- [ ] Fallback zu Englisch definiert
+- [ ] Text-Labels statt Flaggen
+- [ ] Alle UI-Texte übersetzt (keine hartcodierten Strings)
+- [ ] UI aktualisiert sich nach Sprachwechsel
+
+---
+
 ### Mehrsprachigkeit
-- **Struktur:** Übersetze nur User-facing Text, nicht technische Labels
+
+#### Struktur
+- **Übersetze nur User-facing Text:** Technische Labels können Englisch bleiben
 - **Format:** JSON oder YAML mit Namespace (z.B. `common.greeting`)
-- **Default Language:** Dokumentiere Standardsprache
+- **Default Language:** Englisch (internationale Reichweite)
 - **RTL Support:** Bedenke RTL Languages (z.B. Arabisch) für zukünftige Unterstützung
 
-### Text Handling
+#### Translation Files Organisation
+```
+/translations
+  ├── en.json    # English (Default)
+  ├── de.json    # German
+  └── fr.json    # French (Optional)
+```
+
+**Beispiel translations/en.json:**
+```json
+{
+  "common": {
+    "settings": "Settings",
+    "about": "About",
+    "language": "Language"
+  },
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "settings": {
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
+  }
+}
+```
+
+#### Text Handling
 - **Keying:** Nutze prägnante Keys, z.B. `button.save` statt `text1`
 - **Variablen:** Nutze Placeholders für dynamische Werte: `Hello, {name}!`
 - **Plural Forms:** Handle Singular/Plural (z.B. "1 message" vs "5 messages")
 - **Dates/Numbers:** Nutze Locale-aware Formatierung
+  ```typescript
+  // Locale-aware Date
+  new Date().toLocaleDateString(language === 'de' ? 'de-DE' : 'en-US');
+
+  // Locale-aware Number
+  (123456.78).toLocaleString(language === 'de' ? 'de-DE' : 'en-US');
+  ```
+
+#### Ausnahmen (darf hartcodiert bleiben)
+- ✅ **App-Name** (z.B. "Energy Price Germany")
+- ✅ **Technische Bezeichnungen** (z.B. "GitHub", "API", "JSON")
+- ✅ **Versionsnummern** (z.B. "1.2.0")
+- ✅ **URLs und E-Mail-Adressen**
+- ✅ **Emojis** (universell verständlich, aber sparsam nutzen)
 
 ---
 
