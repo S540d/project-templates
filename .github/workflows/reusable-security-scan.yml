@@ -40,8 +40,11 @@ jobs:
           # Echte Fehler brechen hart ab (fail-closed), statt als "keine" durchzurutschen.
           grep_scan() { # $1=Titel  $2..=git-grep-Argumente
             local title="$1"; shift
-            local out rc
-            out="$(git grep "$@" 2>&1)"; rc=$?
+            local out rc=0
+            # set -e: 'out=$(...); rc=$?' bricht bei git-grep rc=1 (= kein Treffer,
+            # der Normalfall) schon an der Zuweisung ab, bevor rc gesetzt wird.
+            # '|| rc=$?' fängt den non-zero ab, damit rc=1 als "sauber" durchläuft.
+            out="$(git grep "$@" 2>&1)" || rc=$?
             if [ "$rc" -eq 0 ]; then
               echo "::error title=$title::Fund im Repo"
               printf '%s\n' "$out"
