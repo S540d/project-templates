@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+# ─────────────────────────────────────────────────────────────────────────
+# Kanonischer Pre-Commit Hook – Basis-Sicherheitschecks (Issue #7)
+# Projekt-spezifische Hooks (react-native/web) source-en diese Datei.
+# Übernimmt die Security-Checks aus EnergyPriceGermany (Issue #276).
+# ─────────────────────────────────────────────────────────────────────────
+
+echo "🔒 Running base security pre-commit checks..."
+
+# Nur hinzugefügte/geänderte Zeilen prüfen (staged diff, '+'-Zeilen)
+STAGED_DIFF=$(git diff --cached --diff-filter=ACM -U0)
+
+# 1. Signing-Fingerprints (SHA1/SHA256 als Colon-Hex) blockieren
+if printf '%s\n' "$STAGED_DIFF" | grep -E '^\+' \
+    | grep -Eq '([0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}'; then
+  echo "❌ ERROR: Signing fingerprint (SHA1/SHA256 colon-hex) in staged changes!"
+  echo "   Fingerprints gehören nicht ins Repo (siehe Issue #276)."
+  exit 1
+fi
+
+# 2. Hardcodierte Tokens / API-Keys in '+'-Zeilen blockieren
+if printf '%s\n' "$STAGED_DIFF" | grep -E '^\+' \
+    | grep -Eiq '(api[_-]?key|secret[_-]?key|auth[_-]?token|access[_-]?token)["'\'' ]*[:=]["'\'' ]*[A-Za-z0-9_\-]{16,}'; then
+  echo "❌ ERROR: Hardcoded API key / token in staged changes!"
+  echo "   Secrets über .env / GitHub Secrets verwalten, nie committen."
+  exit 1
+fi
+
+# 3. Sensible Dateien dürfen nicht getrackt werden
+if git diff --cached --name-only --diff-filter=A \
+    | grep -Eq '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$)'; then
+  echo "❌ ERROR: Sensitive file staged (credentials/keystore)!"
+  echo "   In .gitignore aufnehmen und lokal halten."
+  exit 1
+fi
+
+echo "✅ Base security checks passed."

@@ -1,0 +1,7 @@
+{
+  "//": "Kanonische tsconfig-Basis – React Native / Expo (Issue #7). Projekte extenden diese und setzen include/exclude lokal.",
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true
+  }
+}

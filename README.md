@@ -148,6 +148,28 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
      - Admin Bypass für Hotfixes
      - Einheitliche Rules über alle Projekte
 
+5.5 **Cross-Project Standardisierung** (NEU – Issue #7, Teil 1)
+   Zentrale Source of Truth für Dev-Standards und reproduzierbares Ausrollen.
+   - **`dev-standards/`** – kanonische Basis-Konfigurationen:
+     - `base/` – `.prettierrc.json`, `.editorconfig`, `pre-commit.base` (Security: Fingerprints/Tokens, Issue #276), `global-policy.md`
+     - `react-native/` – `eslint.config.base.mjs` (erprobte FlatConfig aus EnergyPriceGermany), `tsconfig.base.json`, `pre-commit.rn`
+     - `web/` – `eslint.config.base.mjs`, `tsconfig.base.json`, `pre-commit.web`
+   - **`scripts/sync-standards.sh`** – verteilt Commands + Prettier/EditorConfig in Projekte.
+     GLOBAL POLICY wird **idempotent** über einen Marker-Block (`<!-- GLOBAL POLICY:START/END -->`)
+     in die jeweilige `CLAUDE.md` geschrieben – **lokale CLAUDE.md-Inhalte bleiben unberührt**.
+     `--dry-run` unterstützt.
+   - **`scripts/apply-rulesets.sh`** + **`github-ruleset-protect-main-base.json`** –
+     Branch-Protection (Open-Source mit Vandalismusschutz): PR-Pflicht, kein Force-Push/Delete
+     auf main, `required_approving_review_count: 0` (Solo-Merge möglich), Admin-Bypass.
+     **`--dry-run`** + automatisches Backup bestehender Rulesets + PUT-Update statt blindem POST.
+   - **`.github/workflows/reusable-security-scan.yml`** – Pilot-Reusable-Workflow,
+     **fail-closed** (Scanner-Fehler UND Funde brechen ab). Konsumierende Repos pinnen auf `@v1`,
+     **nie `@main`**.
+
+   > Hinweis: Die leeren Platzhalter-Configs früherer Stände sind durch echte, erprobte
+   > Configs ersetzt. Das Legacy `automation-templates/.eslintrc.js` (alte `.eslintrc`-Form)
+   > ist deprecated – Source of Truth ist `dev-standards/**/eslint.config.base.mjs`.
+
 ### Deployment & Publishing
 
 6. **PUBLISHING_CHECKLIST.md**

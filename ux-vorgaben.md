@@ -3,7 +3,7 @@
 
 Allgemeine UX/UI Standards für konsistente, benutzerfreundliche Interfaces über alle Projekte hinweg.
 
-> **Zuletzt aktualisiert:** 2026-01-07
+> **Zuletzt aktualisiert:** 2026-03-14
 > **Hinweis:** Technische Implementierungsdetails (Android Edge-to-Edge, OTA Updates, App Links, etc.) finden sich in [technische_vorgaben.md](technische_vorgaben.md)
 > **Konsolidierung:** Diese Datei integriert nun auch Inhalte aus design-system.md und DESIGN_GUIDELINES.md für eine einheitliche UX-Dokumentation
 
@@ -600,9 +600,10 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 ## Interaktion & Feedback
 
 ### Loading States
-- **Spinner:** Rotierendes Icon oder Skeleton-Screen
+- **Skeleton-Screen:** Bevorzugt statt Spinner (siehe "Skeleton Loading" oben)
+- **Spinner:** Nur als Fallback wenn Skeleton nicht sinnvoll
 - **Duration:** Max. 3 Sekunden ohne Feedback (dann Nachrichten zeigen)
-- **Text:** "Loading...", "Saving...", etc.
+- **Text:** "Loading...", "Saving...", etc. (für Screen Reader via `accessibilityRole="alert"`)
 - **Disable:** Buttons/Inputs während Loading disablen
 
 ### Success/Error Messages
@@ -611,11 +612,94 @@ Support-Links im Settings-Menü sind Standard-Praxis und gelten NICHT als "In-Ap
 - **Position:** Oben rechts (Desktop), Oben Mitte (Mobile)
 - **Icon:** Visual Indicator (✓, ✕, ⚠, ℹ)
 
-### Animations
+### Animations & Micro-Interactions ⭐
+
+> **Referenz-Implementierung:** EnergyPriceGermany v1.5.0 (PR #244)
+> **Bibliothek:** `react-native-reanimated` 3.17+ (empfohlen für alle Expo-Apps)
+
+#### Animation-Grundsätze
 - **Duration:** 200-300ms für Hover/Focus, 300-500ms für Page Transitions
 - **Easing:** `ease-out` für Erscheinen, `ease-in` für Verschwinden
 - **Reduzieren:** `prefers-reduced-motion: reduce` respektieren
 - **Keine flashing:** Nichts sollte schneller als 3x pro Sekunde blinken
+
+#### Micro-Animation Katalog (PFLICHT für alle Expo-Apps)
+
+**Card Mount Animation:**
+```tsx
+// Fade-in + translateY bei Mount
+const opacity = useSharedValue(0);
+const translateY = useSharedValue(8);
+useEffect(() => {
+  opacity.value = withTiming(1, { duration: 350 });
+  translateY.value = withTiming(0, { duration: 350 });
+}, []);
+```
+
+**Button Press Spring:**
+```tsx
+// Scale-Spring auf Press
+const scale = useSharedValue(1);
+const onPressIn = () => { scale.value = withSpring(0.95); };
+const onPressOut = () => { scale.value = withSpring(1); };
+```
+
+**Tooltip Appear:**
+```tsx
+// Scale + Fade bei Erscheinen
+const opacity = useSharedValue(0);
+const scale = useSharedValue(0.9);
+useEffect(() => {
+  opacity.value = withTiming(1, { duration: 150 });
+  scale.value = withTiming(1, { duration: 150 });
+}, []);
+```
+
+**Settings Menu Slide:**
+```tsx
+// Slide-up/down via isMounted-Pattern
+// Mount: height 0 → auto, opacity 0 → 1
+// Unmount: reverse
+```
+
+**Theme Toggle Pill:**
+```tsx
+// Animierter Pill-Schieberegler
+// Positionen via onLayout gemessen
+// Wechsel via withSpring (Pill gleitet unter aktiven Button)
+```
+
+#### Setup für Reanimated in Expo
+1. `npx expo install react-native-reanimated`
+2. `babel.config.js`: Plugin ergänzen (NACH `babel-preset-expo`):
+   ```js
+   plugins: ['react-native-reanimated/plugin']
+   ```
+3. `global.d.ts` anlegen für TS-Typen
+4. **WICHTIG:** Keine manuellen Babel-Presets (`@babel/preset-env` etc.) - sonst Hermes-Build-Fehler!
+
+### Skeleton Loading (PFLICHT für alle Expo-Apps) ⭐
+
+> Ersetzt ActivityIndicator durch visuell ansprechendere Shimmer-Animationen.
+
+#### Shimmer-Skeleton mit LinearGradient
+```tsx
+// SkeletonLoader.tsx - Shimmer via expo-linear-gradient
+// Horizontaler Gradient wandert via useSharedValue+withRepeat über den Container
+// Dark-Mode-aware Farben
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+```
+
+#### Einsatzgebiete
+- **App-Start:** Skeleton statt Spinner während Daten laden
+- **Charts:** Chart-förmige Skeleton-Platzhalter
+- **Listen:** Zeilen-förmige Skeleton-Platzhalter
+- **Cards:** Card-förmige Skeleton mit korrekten Dimensionen
+
+#### Abhängigkeiten
+- `expo-linear-gradient` (für Shimmer-Effekt)
+- `react-native-reanimated` (für Animation)
 
 ### Hover & Focus States
 - **Hover:** Farb-Change, Schatten, oder Scale (max 1.05)
@@ -1250,6 +1334,43 @@ const shareApp = async () => {
 - **compileSdk/targetSdk:** 36+
 - **themes.xml:** Transparente System Bars
 - Separate Dark Mode Themes
+
+### Android Rendering Gotchas (ältere Geräte)
+
+#### Problem 1: Weißer Kasten bei `elevation` + transparentem Background
+
+Android zeichnet `elevation` (Schatten) auf einem opaken Layer. Ein View mit `backgroundColor: 'transparent'` und `elevation > 0` erzeugt automatisch einen weißen rechteckigen Hintergrund — unabhängig von der gesetzten `backgroundColor`.
+
+```typescript
+// ❌ Erzeugt weißen Kasten auf älterem Android
+{ backgroundColor: 'transparent', elevation: 1 }
+
+// ✅ Kein weißer Kasten
+{ backgroundColor: 'transparent', elevation: 0 }
+```
+
+**Faustregel:** `elevation` nur verwenden, wenn der View einen sichtbaren, opaken Background hat. `shadowColor`/`shadowOffset`/`shadowOpacity` sind iOS-only und verursachen das Problem nicht.
+
+#### Problem 2: Unsichtbarer Text durch `fontWeight: '600'`
+
+Ältere Android-Geräte unterstützen nur zwei Gewichtsstufen: `'normal'` (400) und `'bold'` (700). Numerische Zwischenwerte wie `'600'`, `'500'` oder `'300'` werden nicht interpoliert — der Text wird unsichtbar dünn oder gar nicht gerendert.
+
+```typescript
+// ❌ Kann auf älterem Android unsichtbar werden
+{ fontWeight: '600' }
+{ fontWeight: '500' }
+
+// ✅ Universell unterstützt
+{ fontWeight: 'bold' }    // = '700'
+{ fontWeight: 'normal' }  // = '400'
+```
+
+**Faustregel:** Nur `'normal'`, `'bold'`, `'400'` oder `'700'` verwenden, es sei denn eine Custom Font mit explizitem Gewicht ist geladen.
+
+#### Checkliste
+- [ ] Kein `elevation > 0` in Kombination mit `transparent` Background
+- [ ] Kein `fontWeight` mit Werten außer `'normal'`/`'bold'`/`'400'`/`'700'`
+- [ ] Besonders in wiederverwendbaren Komponenten (Buttons, Chips, Badges) prüfen
 
 ### Web (React Native Web / Standard Web)
 
