@@ -1,0 +1,77 @@
+name: Reusable Gitignore Audit
+
+# Prüft Pflicht-Ignore-Einträge + dass keine sensiblen Dateien getrackt werden (Issue #7).
+# Da alle Projekte ÖFFENTLICH sind (Punkt 7), ist der Audit standardmäßig BLOCKING.
+# Aufruf versioniert (@v1):
+#
+#   jobs:
+#     gitignore:
+#       uses: S540d/project-templates/.github/workflows/reusable-gitignore-audit.yml@v1
+
+on:
+  workflow_call:
+    inputs:
+      fail_on_missing:
+        description: 'Bei fehlenden Pflicht-Einträgen / getrackten Secrets hart fehlschlagen'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  gitignore-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit .gitignore und getrackte Dateien
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          problems=0
+
+          if [ ! -f .gitignore ]; then
+            echo "::error title=.gitignore fehlt::Eine .gitignore ist erforderlich"
+            exit 1
+          fi
+
+          # Pflicht-Einträge (Issue #7) – deckungsgleich mit den geprüften
+          # sensiblen Dateitypen weiter unten (.env*, credentials, keystores).
+          required=(
+            ".env"
+            ".env.*"
+            "credentials.json"
+            "*.jks"
+            "*.keystore"
+            "*.p12"
+            "*.p8"
+            "docs/private/"
+          )
+          for entry in "${required[@]}"; do
+            if ! grep -Fq "$entry" .gitignore; then
+              echo "::warning title=Fehlender .gitignore-Eintrag::'$entry' nicht in .gitignore"
+              problems=1
+            fi
+          done
+
+          # Sensible Dateien dürfen NICHT getrackt sein (öffentliches Repo!)
+          if git ls-files | grep -E '(^|/)(\.env(\..+)?$|credentials\.json$|.*\.jks$|.*\.keystore$|.*\.p12$|.*\.p8$)'; then
+            echo "::error title=Sensible Datei getrackt::credentials/keystore/env im öffentlichen Repo"
+            problems=1
+          fi
+
+          # docs/private/ darf nicht getrackt sein
+          if git ls-files | grep -E '^docs/private/'; then
+            echo "::error title=docs/private getrackt::Interne Docs dürfen nicht im Repo sein"
+            problems=1
+          fi
+
+          if [ "$problems" -ne 0 ] && [ "${{ inputs.fail_on_missing }}" = "true" ]; then
+            echo "Gitignore-Audit fehlgeschlagen."
+            exit 1
+          fi
+          echo "Gitignore-Audit abgeschlossen."

@@ -1,0 +1,70 @@
+name: Weekly Cross-Project Audit
+
+# Cron montags 08:00 (Issue #7): triggert in jedem Ziel-Repo einen Self-Audit
+# via repository_dispatch (event_type: weekly-self-audit).
+#
+# ⚠️ TOKEN-SCOPE (Issue #7, Punkt 6):
+#   Der Default-GITHUB_TOKEN kann KEINE fremden Repos dispatchen. Es ist ein
+#   dediziertes Secret ORG_AUTOMATION_TOKEN erforderlich:
+#     - Fine-grained PAT, minimaler Scope: "Contents: read" + "Actions: write"
+#       NUR auf die unten gelisteten Ziel-Repos.
+#     - Als Repo-Secret in project-templates hinterlegen (Settings → Secrets).
+#   Fehlt das Token, bricht der Workflow gleich im ersten Step hart ab (exit 1).
+#
+# Jedes Ziel-Repo braucht zusätzlich einen Listener:
+#     on:
+#       repository_dispatch:
+#         types: [weekly-self-audit]
+#   (wird per sync-standards ausgerollt – siehe Folge-PR / Issue #7).
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Komma-separierte Repos (leer = Default-Liste)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-self-scans:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN }}
+      DEFAULT_REPOS: 'EnergyPriceGermany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe_my_plants'
+    steps:
+      - name: Token vorhanden?
+        shell: bash
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error title=ORG_AUTOMATION_TOKEN fehlt::Fine-grained PAT als Secret hinterlegen (Issue #7, Punkt 6)"
+            exit 1
+          fi
+
+      - name: Dispatch weekly-self-audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          # github.event.inputs ist bei Cron-Läufen (schedule) leer, statt zu fehlen.
+          REPOS="${{ github.event.inputs.repos }}"
+          [ -n "$REPOS" ] || REPOS="$DEFAULT_REPOS"
+
+          IFS=',' read -r -a list <<< "$REPOS"
+          for raw in "${list[@]}"; do
+            repo="$(echo "$raw" | xargs)"
+            [ -n "$repo" ] || continue
+            echo "→ Dispatch S540d/$repo"
+            if gh api "repos/S540d/$repo/dispatches" \
+                 --method POST \
+                 --field event_type='weekly-self-audit' \
+                 --field 'client_payload[source]=project-templates/weekly-audit'; then
+              echo "  ✅ ausgelöst"
+            else
+              echo "::warning title=Dispatch fehlgeschlagen::S540d/$repo (Token-Scope? Listener?)"
+            fi
+          done
