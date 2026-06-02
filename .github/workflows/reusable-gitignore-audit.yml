@@ -39,11 +39,13 @@ jobs:
             exit 1
           fi
 
-          # Pflicht-Einträge (Issue #7) – deckungsgleich mit den geprüften
-          # sensiblen Dateitypen weiter unten (.env*, credentials, keystores).
+          # Pflicht-Einträge (Issue #7). Nur konventionell-geheime Dateien.
+          # Bewusst NICHT .env.* gefordert: committete .env.<environment> mit
+          # ausschließlich PUBLIC-Config (EXPO_PUBLIC_*, NODE_ENV) sind ein
+          # legitimes Muster. Geheime Werte fängt der Content-Scan separat ab.
           required=(
             ".env"
-            ".env.*"
+            ".env.local"
             "credentials.json"
             "*.jks"
             "*.keystore"
@@ -59,8 +61,11 @@ jobs:
           done
 
           # Sensible Dateien dürfen NICHT getrackt sein (öffentliches Repo!)
-          if git ls-files | grep -E '(^|/)(\.env(\..+)?$|credentials\.json$|.*\.jks$|.*\.keystore$|.*\.p12$|.*\.p8$)'; then
-            echo "::error title=Sensible Datei getrackt::credentials/keystore/env im öffentlichen Repo"
+          # .env-Erkennung: nur die konventionell-geheimen (.env, .env.local,
+          # .env.<env>.local) – NICHT committete .env.<environment>-Config.
+          if git ls-files \
+               | grep -E '(^|/)(\.env(\.local)?$|\.env\.[^/]*\.local$|credentials\.json$|.*\.jks$|.*\.keystore$|.*\.p12$|.*\.p8$)'; then
+            echo "::error title=Sensible Datei getrackt::credentials/keystore/secret-env im öffentlichen Repo"
             problems=1
           fi
 

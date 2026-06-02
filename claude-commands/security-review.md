@@ -26,11 +26,11 @@ Für jedes Repo dieselben Checks (entsprechen `reusable-security-scan.yml`):
   ```bash
   git -C "$repo" grep -niE '(api[_-]?key|secret[_-]?key|auth[_-]?token|access[_-]?token)["'\'' ]*[:=]["'\'' ]*[A-Za-z0-9_-]{16,}' -- . ':!*.lock'
   ```
-- **Getrackte sensible Dateien:**
+- **Getrackte sensible Dateien:** (nur konventionell-geheime .env – nicht committete `.env.<environment>`-Config)
   ```bash
-  git -C "$repo" ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$|^\.env)'
+  git -C "$repo" ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$|(^|/)\.env(\.local)?$|(^|/)\.env\..*\.local$)'
   ```
-- **Gitignore-Pflichteinträge** vorhanden? (`.env`, `.env.*`, `credentials.json`, `*.jks`, `*.keystore`, `*.p12`, `*.p8`, `docs/private/`) – deckungsgleich mit `reusable-gitignore-audit.yml`
+- **Gitignore-Pflichteinträge** vorhanden? (`.env`, `.env.local`, `credentials.json`, `*.jks`, `*.keystore`, `*.p12`, `*.p8`, `docs/private/`) – deckungsgleich mit `reusable-gitignore-audit.yml`. `.env.<environment>` mit reiner Public-Config ist erlaubt.
 - **`docs/private/` nicht getrackt?**
 - **`npm audit`** (falls `package.json` vorhanden) – Vulnerabilities zählen.
 
