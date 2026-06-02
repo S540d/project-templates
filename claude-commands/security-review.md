@@ -28,7 +28,7 @@ Für jedes Repo dieselben Checks (entsprechen `reusable-security-scan.yml`):
   ```
 - **Getrackte sensible Dateien:** (nur konventionell-geheime .env – nicht committete `.env.<environment>`-Config)
   ```bash
-  git -C "$repo" ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$|(^|/)\.env(\.local)?$|(^|/)\.env\..*\.local$)'
+  git -C "$repo" ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$|(^|/)\.env(\.local)?$|(^|/)\.env\.[^/]*\.local$)'
   ```
 - **Gitignore-Pflichteinträge** vorhanden? (`.env`, `.env.local`, `credentials.json`, `*.jks`, `*.keystore`, `*.p12`, `*.p8`, `docs/private/`) – deckungsgleich mit `reusable-gitignore-audit.yml`. `.env.<environment>` mit reiner Public-Config ist erlaubt.
 - **`docs/private/` nicht getrackt?**

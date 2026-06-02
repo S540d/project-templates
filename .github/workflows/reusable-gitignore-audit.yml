@@ -69,6 +69,27 @@ jobs:
             problems=1
           fi
 
+          # Committete .env.<environment> dürfen NUR Public-Config enthalten.
+          # Allowlist der erlaubten Variablennamen erzwingen, damit kein Geheimnis
+          # (DATABASE_URL, SENTRY_DSN, …) unbemerkt im öffentlichen Repo landet.
+          allow_re='^(EXPO_PUBLIC_[A-Z0-9_]+|EXPO_ENV|NODE_ENV)='
+          while IFS= read -r envfile; do
+            [ -n "$envfile" ] || continue
+            # Nur echte Environment-Config-Dateien (.env.<env>), keine secret-Varianten
+            case "$envfile" in
+              *.local) continue ;;
+            esac
+            while IFS= read -r line; do
+              # Kommentare und Leerzeilen ignorieren
+              case "$line" in ''|\#*) continue ;; esac
+              if ! printf '%s\n' "$line" | grep -Eq "$allow_re"; then
+                varname="${line%%=*}"
+                echo "::error title=Nicht erlaubte env-Variable::'$varname' in $envfile – committete .env.<environment> dürfen nur EXPO_PUBLIC_*, EXPO_ENV, NODE_ENV enthalten"
+                problems=1
+              fi
+            done < "$envfile"
+          done < <(git ls-files | grep -E '(^|/)\.env\.[^/]+$' | grep -Ev '\.local$')
+
           # docs/private/ darf nicht getrackt sein
           if git ls-files | grep -E '^docs/private/'; then
             echo "::error title=docs/private getrackt::Interne Docs dürfen nicht im Repo sein"
