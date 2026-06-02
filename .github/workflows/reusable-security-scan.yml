@@ -55,10 +55,11 @@ jobs:
             fi
           }
 
-          echo "::group::Signing fingerprints (SHA1/SHA256 colon-hex)"
-          grep_scan "Signing fingerprint" \
-            -nE '([0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}' -- . ':!*.lock' ':!**/node_modules/**'
-          echo "::endgroup::"
+          # Hinweis: Kein Fingerprint-Check im CI-Scan. SHA1/SHA256-Fingerprints
+          # sind öffentliche Hashes (kein Geheimnis) und werden teils bewusst in
+          # Docs dokumentiert (z.B. BUILD.md). Das Geheimnis ist die .jks/.keystore
+          # selbst – die deckt der Sensitive-File-Check ab. Wer staged Fingerprints
+          # lokal blocken will, nutzt den Pre-Commit-Hook (dev-standards/base).
 
           echo "::group::Hardcoded API keys / tokens"
           grep_scan "Hardcoded secret" \
