@@ -1,0 +1,76 @@
+name: Reusable CI Quality
+
+# Konfigurierbarer Lint/Type-Check/Test-Job (Issue #7). Aufruf versioniert (@v1):
+#
+#   jobs:
+#     quality:
+#       uses: S540d/project-templates/.github/workflows/reusable-ci-quality.yml@v1
+#       with:
+#         node_version: '20'
+#         run_lint: true
+#         run_typecheck: true
+#         run_tests: true
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: 'Node.js Version'
+        required: false
+        type: string
+        default: '20'
+      run_lint:
+        required: false
+        type: boolean
+        default: true
+      run_typecheck:
+        required: false
+        type: boolean
+        default: true
+      run_tests:
+        required: false
+        type: boolean
+        default: true
+      lint_command:
+        required: false
+        type: string
+        default: 'npm run lint'
+      typecheck_command:
+        required: false
+        type: string
+        default: 'npm run type-check'
+      test_command:
+        required: false
+        type: string
+        default: 'npm test'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        if: ${{ inputs.run_lint }}
+        run: ${{ inputs.lint_command }}
+
+      - name: Type-Check
+        if: ${{ inputs.run_typecheck }}
+        run: ${{ inputs.typecheck_command }}
+
+      - name: Tests
+        if: ${{ inputs.run_tests }}
+        run: ${{ inputs.test_command }}
