@@ -15,9 +15,10 @@ fi
 echo "🔍 Running React Native pre-commit checks..."
 
 # 2. console.log / console.debug verbieten (außer in scripts/)
-if git diff --cached --name-only --diff-filter=ACM \
-    | grep -E '\.(ts|tsx|js|jsx)$' | grep -v '^scripts/' \
-    | xargs grep -nE 'console\.(log|debug)' 2>/dev/null; then
+# git grep --cached durchsucht den Index direkt → robust bei Spaces/Sonderzeichen,
+# kein leeres-xargs-Problem. Exit 0 = Treffer → blocken.
+if git grep --cached -nE 'console\.(log|debug)' -- \
+     '*.ts' '*.tsx' '*.js' '*.jsx' ':!scripts/**'; then
   echo "❌ ERROR: console.log/debug in staged files (außer scripts/)."
   exit 1
 fi

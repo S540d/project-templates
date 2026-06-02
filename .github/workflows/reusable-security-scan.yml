@@ -36,28 +36,43 @@ jobs:
 
           findings=0
 
+          # git grep: exit 0 = Match (Fund), 1 = kein Match (sauber), >=2 = echter Fehler.
+          # Echte Fehler brechen hart ab (fail-closed), statt als "keine" durchzurutschen.
+          grep_scan() { # $1=Titel  $2..=git-grep-Argumente
+            local title="$1"; shift
+            local out rc
+            out="$(git grep "$@" 2>&1)"; rc=$?
+            if [ "$rc" -eq 0 ]; then
+              echo "::error title=$title::Fund im Repo"
+              printf '%s\n' "$out"
+              findings=1
+            elif [ "$rc" -eq 1 ]; then
+              echo "keine"
+            else
+              echo "::error title=Scanner-Fehler::git grep brach ab (rc=$rc) bei: $title"
+              printf '%s\n' "$out"
+              exit "$rc"
+            fi
+          }
+
           echo "::group::Signing fingerprints (SHA1/SHA256 colon-hex)"
-          if git grep -nE '([0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}' -- . ':!*.lock' ':!**/node_modules/**'; then
-            echo "::error title=Signing fingerprint::Fingerprint im Repo gefunden (Issue #276)"
-            findings=1
-          else
-            echo "keine"
-          fi
+          grep_scan "Signing fingerprint" \
+            -nE '([0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}' -- . ':!*.lock' ':!**/node_modules/**'
           echo "::endgroup::"
 
           echo "::group::Hardcoded API keys / tokens"
-          if git grep -niE '(api[_-]?key|secret[_-]?key|auth[_-]?token|access[_-]?token)["'\'' ]*[:=]["'\'' ]*[A-Za-z0-9_-]{16,}' \
-               -- . ':!*.lock' ':!**/node_modules/**' ':!**/*.test.*' ':!**/__tests__/**'; then
-            echo "::error title=Hardcoded secret::API-Key/Token im Code gefunden"
-            findings=1
-          else
-            echo "keine"
-          fi
+          grep_scan "Hardcoded secret" \
+            -niE '(api[_-]?key|secret[_-]?key|auth[_-]?token|access[_-]?token)["'\'' ]*[:=]["'\'' ]*[A-Za-z0-9_-]{16,}' \
+            -- . ':!*.lock' ':!**/node_modules/**' ':!**/*.test.*' ':!**/__tests__/**'
           echo "::endgroup::"
 
           echo "::group::Tracked sensitive files"
-          if git ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$)'; then
+          # git ls-files kann nicht "Fehler vs. kein Treffer" über Exit-Code liefern →
+          # Treffer über nicht-leere Ausgabe erkennen; grep-Fehler werden ignoriert (rc egal).
+          sensitive="$(git ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$)' || true)"
+          if [ -n "$sensitive" ]; then
             echo "::error title=Sensitive file tracked::credentials/keystore im Repo getrackt"
+            printf '%s\n' "$sensitive"
             findings=1
           else
             echo "keine"

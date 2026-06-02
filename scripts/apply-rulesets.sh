@@ -51,6 +51,7 @@ if [ "${#REPOS[@]}" -eq 0 ]; then
 fi
 
 command -v gh >/dev/null 2>&1 || { echo "❌ gh CLI nicht installiert"; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "❌ jq nicht installiert (brew install jq)"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "❌ gh nicht authentifiziert (gh auth login)"; exit 1; }
 [ -f "$RULESET_FILE" ] || { echo "❌ Ruleset-Datei fehlt: $RULESET_FILE"; exit 1; }
 
