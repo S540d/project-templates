@@ -162,9 +162,15 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
      Branch-Protection (Open-Source mit Vandalismusschutz): PR-Pflicht, kein Force-Push/Delete
      auf main, `required_approving_review_count: 0` (Solo-Merge möglich), Admin-Bypass.
      **`--dry-run`** + automatisches Backup bestehender Rulesets + PUT-Update statt blindem POST.
-   - **`.github/workflows/reusable-security-scan.yml`** – Pilot-Reusable-Workflow,
-     **fail-closed** (Scanner-Fehler UND Funde brechen ab). Konsumierende Repos pinnen auf `@v1`,
-     **nie `@main`**.
+   - **Reusable Workflows** (`.github/workflows/`) – versioniert aufrufen (`@v1`, **nie `@main`**):
+     - `reusable-security-scan.yml` – **fail-closed** (Scanner-Fehler UND Funde brechen ab)
+     - `reusable-ci-quality.yml` – konfigurierbar (lint/type-check/test, Node-Version, Commands)
+     - `reusable-gitignore-audit.yml` – **blocking** (alle Repos öffentlich): Pflicht-Ignores + keine getrackten Secrets
+     - `reusable-dev-standards-audit.yml` – **non-blocking** Hinweis-Audit (Prettier/EditorConfig/Husky/ESLint/Policy)
+     - `weekly-audit.yml` – Cron Mo 08:00, dispatcht `weekly-self-audit` in alle Repos. **Braucht `ORG_AUTOMATION_TOKEN`** (fine-grained PAT, minimaler Scope – siehe Header).
+   - **`claude-commands/`** – standardisierte Commands (per `sync-standards.sh` ausgerollt):
+     `aufräumen.md`, `pr-review.md` (mit GLOBAL-POLICY-Guardrails), `dependency-update.md`,
+     `security-review.md` (**global** unter `~/.claude/commands/`, cross-project Scan).
 
    > Hinweis: Die leeren Platzhalter-Configs früherer Stände sind durch echte, erprobte
    > Configs ersetzt. Das Legacy `automation-templates/.eslintrc.js` (alte `.eslintrc`-Form)
