@@ -142,11 +142,24 @@ Zentrale Vorlagen und Standards für alle Projekte. Diese Templates definieren B
    - **github-ruleset-protect-main-react-native.json** - Ruleset für React Native Projekte
    - **github-ruleset-protect-main-web.json** - Ruleset für Web/PWA Projekte
    - **scripts/setup-branch-protection.sh** - Automatische Installation
+   - **scripts/apply-rulesets.sh** - Rollout für alle Standard-Repositories
    - **Features**:
      - Verhindert Force Pushes auf main
      - Required Status Checks (code-quality, build-web)
      - Admin Bypass für Hotfixes
      - Einheitliche Rules über alle Projekte
+
+5.5 **Reusable Workflows** (NEU)
+   - `.github/workflows/reusable-security-scan.yml`
+   - `.github/workflows/reusable-gitignore-audit.yml`
+   - `.github/workflows/reusable-ci-quality.yml`
+   - `.github/workflows/reusable-dev-standards-audit.yml`
+   - `.github/workflows/weekly-audit.yml`
+
+5.6 **Cross-Project Standards Sync** (NEU)
+   - `claude-commands/` - Standardisierte Claude Commands mit Platzhaltern
+   - `dev-standards/` - Basis-/Web-/React-Native Konfigurationsvorlagen
+   - `scripts/sync-standards.sh` - Sync von Commands, Prettier, EditorConfig und GLOBAL POLICY
 
 ### Deployment & Publishing
 
@@ -214,9 +227,12 @@ Dann sind alle Templates verfügbar unter `.templates/`:
 ├── accessibility-guidelines.md         # WCAG 2.1 AA Guidelines
 ├── testing-standards.md                # Testing Best Practices
 ├── PUBLISHING_CHECKLIST.md             # Publishing Checklist
+├── claude-commands/                    # Standardisierte Claude Commands
+├── dev-standards/                      # Basis-Standards für Rollout
 │
 └── .github/
     ├── README.md                       # GitHub Templates Dokumentation
+    ├── workflows/                      # Reusable Workflows + Weekly Audit
     ├── ISSUE_TEMPLATE/
     │   ├── bug.md                      # Bug Report Template
     │   ├── feature.md                  # Feature Request Template
@@ -512,4 +528,3 @@ Diese Dateien wurden konsolidiert. Nutze stattdessen die neuen Dateien:
 - CI/CD: [technische_vorgaben.md → CI/CD & GitHub Actions](technische_vorgaben.md#cicd--github-actions)
 - Android Releases: [technische_vorgaben.md → Android App Links](technische_vorgaben.md#android-app-links-deep-linking)
 - Expo Releases: [technische_vorgaben.md → OTA Updates](technische_vorgaben.md#expo-ota-updates-kritisch)
-

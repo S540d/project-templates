@@ -1,0 +1,56 @@
+name: Reusable Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      fail_on_findings:
+        description: 'Fail the workflow when findings are detected'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan tracked files for sensitive patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          patterns='(api[_-]?key|secret[_-]?key|private[_-]?key|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|-----BEGIN PRIVATE KEY-----|token\s*[:=]|password\s*[:=])'
+          findings_file="$(mktemp)"
+          forbidden_file_findings="$(mktemp)"
+
+          git ls-files -z | xargs -0 grep -nE "$patterns" --color=never > "$findings_file" || true
+          git ls-files | grep -E '(credentials\.json|\.jks$|\.keystore$|\.p12$|\.p8$)' > "$forbidden_file_findings" || true
+
+          findings_count="$(wc -l < "$findings_file")"
+          forbidden_count="$(wc -l < "$forbidden_file_findings")"
+
+          echo "Pattern findings: $findings_count"
+          echo "Forbidden file findings: $forbidden_count"
+
+          if [ "$findings_count" -gt 0 ]; then
+            echo "::warning title=Sensitive pattern matches::Review potential secret-like values"
+            head -n 100 "$findings_file"
+          fi
+
+          if [ "$forbidden_count" -gt 0 ]; then
+            echo "::warning title=Sensitive files tracked::Forbidden sensitive files are tracked"
+            cat "$forbidden_file_findings"
+          fi
+
+          if [ "$findings_count" -gt 0 ] || [ "$forbidden_count" -gt 0 ]; then
+            if [ "${{ inputs.fail_on_findings }}" = 'true' ]; then
+              echo "Security scan failed because findings were detected."
+              exit 1
+            fi
+          fi
+
+          echo "Security scan completed."

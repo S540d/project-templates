@@ -1,0 +1,71 @@
+name: Reusable CI Quality
+
+on:
+  workflow_call:
+    inputs:
+      run_lint:
+        type: boolean
+        required: false
+        default: true
+      run_typecheck:
+        type: boolean
+        required: false
+        default: true
+      run_tests:
+        type: boolean
+        required: false
+        default: true
+      lint_command:
+        type: string
+        required: false
+        default: 'npm run lint'
+      typecheck_command:
+        type: string
+        required: false
+        default: 'npm run type-check'
+      test_command:
+        type: string
+        required: false
+        default: 'npm test'
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo 'No package.json found, skipping dependency install.'
+          fi
+
+      - name: Run lint
+        if: ${{ inputs.run_lint }}
+        shell: bash
+        run: ${{ inputs.lint_command }}
+
+      - name: Run type-check
+        if: ${{ inputs.run_typecheck }}
+        shell: bash
+        run: ${{ inputs.typecheck_command }}
+
+      - name: Run tests
+        if: ${{ inputs.run_tests }}
+        shell: bash
+        run: ${{ inputs.test_command }}

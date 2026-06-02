@@ -1,0 +1,32 @@
+name: Reusable Dev Standards Audit
+
+on:
+  workflow_call:
+
+jobs:
+  standards-audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Audit project standard files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=0
+
+          [ -f .prettierrc.json ] || { echo '::warning::.prettierrc.json missing'; missing=$((missing + 1)); }
+          [ -f .editorconfig ] || { echo '::warning::.editorconfig missing'; missing=$((missing + 1)); }
+          [ -f eslint.config.mjs ] || [ -f eslint.config.js ] || [ -f eslint.config.cjs ] || { echo '::warning::ESLint FlatConfig missing'; missing=$((missing + 1)); }
+          [ -d .husky ] || { echo '::warning::.husky directory missing'; missing=$((missing + 1)); }
+
+          if [ "$missing" -eq 0 ]; then
+            echo 'All audited dev-standard files are present.'
+          else
+            echo "Audit completed with $missing warning(s)."
+          fi

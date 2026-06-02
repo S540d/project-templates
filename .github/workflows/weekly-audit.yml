@@ -1,0 +1,41 @@
+name: Weekly Cross-Project Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Comma-separated repositories to trigger'
+        required: false
+        type: string
+        default: 'EnergyPriceGermany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe_my_plants'
+
+jobs:
+  trigger-self-scans:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch weekly self-audit events
+        env:
+          GH_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          REPOS: ${{ inputs.repos || 'EnergyPriceGermany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe_my_plants' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IFS=',' read -r -a repos <<< "$REPOS"
+
+          for repo in "${repos[@]}"; do
+            cleaned="$(echo "$repo" | xargs)"
+            [ -n "$cleaned" ] || continue
+
+            echo "Dispatching weekly-self-audit for S540d/$cleaned"
+            gh api "repos/S540d/$cleaned/dispatches" \
+              --method POST \
+              --field event_type='weekly-self-audit' \
+              --field client_payload='{"source":"project-templates/weekly-audit"}' \
+              || echo "::warning::Failed to dispatch event for $cleaned"
+          done

@@ -1,0 +1,66 @@
+name: Reusable Gitignore Audit
+
+on:
+  workflow_call:
+    inputs:
+      fail_on_missing:
+        description: 'Fail when required ignore entries are missing'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  gitignore-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate .gitignore and CLAUDE.md
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f .gitignore ]; then
+            echo "::error title=.gitignore missing::.gitignore file is required"
+            exit 1
+          fi
+
+          required_entries=(
+            '.env'
+            '.env.*'
+            'credentials.json'
+            '*.jks'
+            '*.keystore'
+            '*.p12'
+            '*.p8'
+            'docs/private/'
+            'keystore/'
+            'android/'
+            'RELEASE_CHECKLIST.md'
+            'ANDROID_STORE_CHECKLIST.md'
+          )
+
+          missing=0
+          for entry in "${required_entries[@]}"; do
+            if ! grep -Fxq "$entry" .gitignore; then
+              echo "::warning title=Missing gitignore entry::'$entry' is not present"
+              missing=$((missing + 1))
+            fi
+          done
+
+          if [ -f CLAUDE.md ]; then
+            secret_patterns='(api[_-]?key|secret|password\s*[:=]|token\s*[:=]|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY|-----BEGIN PRIVATE KEY-----)'
+            if grep -nE "$secret_patterns" CLAUDE.md > /tmp/claude_secret_hits.txt; then
+              echo "::warning title=Potential secrets in CLAUDE.md::Review detected lines"
+              cat /tmp/claude_secret_hits.txt
+              missing=$((missing + 1))
+            fi
+          fi
+
+          echo "Missing/flagged findings: $missing"
+          if [ "$missing" -gt 0 ] && [ "${{ inputs.fail_on_missing }}" = 'true' ]; then
+            exit 1
+          fi
