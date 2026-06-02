@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+# ─────────────────────────────────────────────────────────────────────────
+# Pre-Commit Hook – Web (React / PWA / TS) (Issue #7)
+# Reihenfolge: Basis-Security → Web-spezifische Checks → lint-staged
+# Installation: nach .husky/pre-commit kopieren (sh-kompatibel halten).
+# ─────────────────────────────────────────────────────────────────────────
+
+HOOK_DIR=$(dirname "$0")
+
+# 1. Basis-Security-Checks (Fingerprints, Tokens, sensible Dateien)
+if [ -f "$HOOK_DIR/pre-commit.base" ]; then
+  . "$HOOK_DIR/pre-commit.base" || exit 1
+fi
+
+echo "🔍 Running Web pre-commit checks..."
+
+# 2. console.log / console.debug verbieten (außer in scripts/)
+if git diff --cached --name-only --diff-filter=ACM \
+    | grep -E '\.(ts|tsx|js|jsx)$' | grep -v '^scripts/' \
+    | xargs grep -nE 'console\.(log|debug)' 2>/dev/null; then
+  echo "❌ ERROR: console.log/debug in staged files (außer scripts/)."
+  exit 1
+fi
+
+# 3. lint-staged (Flat Config + Stash-Bugfix aus Issue #289)
+if [ -f node_modules/.bin/lint-staged ]; then
+  npx lint-staged --stash false --no-warn-ignored || exit 1
+fi
+
+echo "✅ Web pre-commit checks passed."

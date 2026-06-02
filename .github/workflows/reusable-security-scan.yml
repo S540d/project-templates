@@ -1,0 +1,71 @@
+name: Reusable Security Scan
+
+# Pilot-Workflow (Issue #7, Phase 2). Konsumierende Repos rufen ihn versioniert auf:
+#
+#   jobs:
+#     security:
+#       uses: S540d/project-templates/.github/workflows/reusable-security-scan.yml@v1
+#
+# WICHTIG: immer auf ein getaggtes Release (@v1) pinnen, nie @main (Issue #7, Punkt 1).
+
+on:
+  workflow_call:
+    inputs:
+      fail_on_findings:
+        description: 'Bei Funden hart fehlschlagen'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan tracked files (fail-closed)
+        shell: bash
+        run: |
+          # fail-closed: jeder Scanner-Fehler bricht den Job ab (Issue #7, Punkt 1).
+          # Kein 'grep || true', das echte Fehler verschluckt.
+          set -euo pipefail
+
+          findings=0
+
+          echo "::group::Signing fingerprints (SHA1/SHA256 colon-hex)"
+          if git grep -nE '([0-9A-Fa-f]{2}:){15,}[0-9A-Fa-f]{2}' -- . ':!*.lock' ':!**/node_modules/**'; then
+            echo "::error title=Signing fingerprint::Fingerprint im Repo gefunden (Issue #276)"
+            findings=1
+          else
+            echo "keine"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Hardcoded API keys / tokens"
+          if git grep -niE '(api[_-]?key|secret[_-]?key|auth[_-]?token|access[_-]?token)["'\'' ]*[:=]["'\'' ]*[A-Za-z0-9_-]{16,}' \
+               -- . ':!*.lock' ':!**/node_modules/**' ':!**/*.test.*' ':!**/__tests__/**'; then
+            echo "::error title=Hardcoded secret::API-Key/Token im Code gefunden"
+            findings=1
+          else
+            echo "keine"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Tracked sensitive files"
+          if git ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$)'; then
+            echo "::error title=Sensitive file tracked::credentials/keystore im Repo getrackt"
+            findings=1
+          else
+            echo "keine"
+          fi
+          echo "::endgroup::"
+
+          if [ "$findings" -ne 0 ] && [ "${{ inputs.fail_on_findings }}" = "true" ]; then
+            echo "Security scan failed: Funde vorhanden."
+            exit 1
+          fi
+          echo "Security scan completed."
