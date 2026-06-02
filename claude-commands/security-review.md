@@ -30,7 +30,7 @@ Für jedes Repo dieselben Checks (entsprechen `reusable-security-scan.yml`):
   ```bash
   git -C "$repo" ls-files | grep -E '(credentials\.json$|\.jks$|\.keystore$|\.p12$|\.p8$|^\.env)'
   ```
-- **Gitignore-Pflichteinträge** vorhanden? (`.env`, `credentials.json`, `*.jks`, `*.keystore`, `docs/private/`)
+- **Gitignore-Pflichteinträge** vorhanden? (`.env`, `.env.*`, `credentials.json`, `*.jks`, `*.keystore`, `*.p12`, `*.p8`, `docs/private/`) – deckungsgleich mit `reusable-gitignore-audit.yml`
 - **`docs/private/` nicht getrackt?**
 - **`npm audit`** (falls `package.json` vorhanden) – Vulnerabilities zählen.
 

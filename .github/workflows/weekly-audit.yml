@@ -9,7 +9,7 @@ name: Weekly Cross-Project Audit
 #     - Fine-grained PAT, minimaler Scope: "Contents: read" + "Actions: write"
 #       NUR auf die unten gelisteten Ziel-Repos.
 #     - Als Repo-Secret in project-templates hinterlegen (Settings → Secrets).
-#   Ohne dieses Token laufen die Dispatches still ins Leere (pro Repo ::warning).
+#   Fehlt das Token, bricht der Workflow gleich im ersten Step hart ab (exit 1).
 #
 # Jedes Ziel-Repo braucht zusätzlich einen Listener:
 #     on:
@@ -50,7 +50,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPOS="${{ inputs.repos }}"
+          # github.event.inputs ist bei Cron-Läufen (schedule) leer, statt zu fehlen.
+          REPOS="${{ github.event.inputs.repos }}"
           [ -n "$REPOS" ] || REPOS="$DEFAULT_REPOS"
 
           IFS=',' read -r -a list <<< "$REPOS"

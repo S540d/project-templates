@@ -39,12 +39,16 @@ jobs:
             exit 1
           fi
 
-          # Pflicht-Einträge (Issue #7)
+          # Pflicht-Einträge (Issue #7) – deckungsgleich mit den geprüften
+          # sensiblen Dateitypen weiter unten (.env*, credentials, keystores).
           required=(
             ".env"
+            ".env.*"
             "credentials.json"
             "*.jks"
             "*.keystore"
+            "*.p12"
+            "*.p8"
             "docs/private/"
           )
           for entry in "${required[@]}"; do
