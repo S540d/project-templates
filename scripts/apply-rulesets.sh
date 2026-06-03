@@ -40,13 +40,13 @@ done
 
 if [ "${#REPOS[@]}" -eq 0 ]; then
   REPOS=(
-    "EnergyPriceGermany"
+    "Energy_Price_Germany"
     "CD-to-Spotify-PWA"
     "1x1_Trainer"
     "DrawFromMemory"
     "Eisenhauer"
     "Pflanzkalender"
-    "safe_my_plants"
+    "safe-my-plants"
   )
 fi
 
