@@ -72,19 +72,21 @@ jobs:
           # Committete .env.<environment> dürfen NUR Public-Config enthalten.
           # Allowlist der erlaubten Variablennamen erzwingen, damit kein Geheimnis
           # (DATABASE_URL, SENTRY_DSN, …) unbemerkt im öffentlichen Repo landet.
-          allow_re='^(EXPO_PUBLIC_[A-Z0-9_]+|EXPO_ENV|NODE_ENV)='
+          # Erlaubt: Expo-Projekte (EXPO_PUBLIC_*) und Vite-Projekte (VITE_*).
+          # .env.example ist eine Vorlage-Datei und wird bewusst übersprungen.
+          allow_re='^(EXPO_PUBLIC_[A-Z0-9_]+|EXPO_ENV|VITE_[A-Z0-9_]+|NODE_ENV)='
           while IFS= read -r envfile; do
             [ -n "$envfile" ] || continue
-            # Nur echte Environment-Config-Dateien (.env.<env>), keine secret-Varianten
+            # .env.example ist Vorlage – kein Inhalt zu prüfen; .env.*.local ist secret
             case "$envfile" in
-              *.local) continue ;;
+              *.example|*.local) continue ;;
             esac
             while IFS= read -r line; do
               # Kommentare und Leerzeilen ignorieren
               case "$line" in ''|\#*) continue ;; esac
               if ! printf '%s\n' "$line" | grep -Eq "$allow_re"; then
                 varname="${line%%=*}"
-                echo "::error title=Nicht erlaubte env-Variable::'$varname' in $envfile – committete .env.<environment> dürfen nur EXPO_PUBLIC_*, EXPO_ENV, NODE_ENV enthalten"
+                echo "::error title=Nicht erlaubte env-Variable::'$varname' in $envfile – committete .env.<environment> dürfen nur EXPO_PUBLIC_*, EXPO_ENV, VITE_*, NODE_ENV enthalten"
                 problems=1
               fi
             done < "$envfile"
