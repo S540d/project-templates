@@ -1,6 +1,6 @@
 name: Reusable PR Review (Claude)
 
-# Automatischer Code-Review via Anthropic API. Aufruf versioniert (@v1):
+# Automatischer Code-Review via Anthropic API + Merge-Gate. Aufruf versioniert (@v1):
 #
 #   jobs:
 #     pr-review:
@@ -8,7 +8,6 @@ name: Reusable PR Review (Claude)
 #       secrets:
 #         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 #       with:
-#         # Optional: Sprache des Reviews (default: de)
 #         language: 'de'
 #
 # Voraussetzungen:
@@ -17,8 +16,17 @@ name: Reusable PR Review (Claude)
 #
 # Permissions im aufrufenden Workflow:
 #   permissions:
-#     pull-requests: write
+#     pull-requests: write   # Review-Kommentare + Label entfernen
 #     contents: read
+#     statuses: write        # Commit-Status "review-gate"
+#
+# Merge-Gate (Hybrid):
+#   - Claude analysiert den Diff und schließt die Antwort mit "FINDINGS: yes|no" ab.
+#   - Findings  -> Inline-Review-Kommentare + Commit-Status "review-gate" = failure (rot).
+#   - Keine     -> Commit-Status "review-gate" = success (grün), Merge sofort frei.
+#   - Parse-Fehler / leere API-Antwort -> failure (sicher: lieber blocken).
+#   - Bei "synchronize" (neuer Commit) wird das Ack-Label entfernt -> Re-Review erzwungen.
+#   Das Label-Setzen wird von reusable-review-gate-resolve.yml in success umgesetzt.
 
 on:
   workflow_call:
@@ -38,14 +46,20 @@ on:
         required: false
         type: number
         default: 40000
+      ack_label:
+        description: 'Label, mit dem ein Mensch den Review quittiert (löst das Gate)'
+        required: false
+        type: string
+        default: 'suggestions gelesen und verstanden'
     secrets:
       anthropic_api_key:
         description: 'Anthropic API Key'
-        required: true
+        required: false
 
 permissions:
   pull-requests: write
   contents: read
+  statuses: write
 
 jobs:
   claude-review:
@@ -57,6 +71,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Reset acknowledgement label on new commit
+        # Bei neuem Push muss erneut quittiert werden (nachträgliche Findings nicht durchwinken).
+        if: github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ACK_LABEL: ${{ inputs.ack_label }}
+        run: |
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --remove-label "$ACK_LABEL" 2>/dev/null || true
 
       - name: Get PR diff
         id: diff
@@ -98,8 +123,32 @@ jobs:
           LANGUAGE: ${{ inputs.language }}
           MODEL: ${{ inputs.model }}
         run: |
+          # Gemeinsamer Format-Vertrag: letzte Zeile MUSS "FINDINGS: yes" oder "FINDINGS: no" sein.
+          # Bei yes zusätzlich pro umsetzbarem Finding eine Zeile im Block INLINE_COMMENTS:
+          #   FILE:<pfad> LINE:<zeile-im-neuen-stand> :: <kurzer kommentar>
+          FORMAT_EN="IMPORTANT OUTPUT CONTRACT — follow exactly:
+          1) Write your review as markdown (sections for bugs, security, performance, quality).
+          2) Then output a block delimited by lines 'INLINE_COMMENTS_START' and 'INLINE_COMMENTS_END'.
+             Inside, one line per actionable finding, format:
+               FILE:<path> LINE:<line number in the NEW file> :: <short comment>
+             Use only files/lines present in the diff. Omit the block if there are no inline findings.
+          3) The VERY LAST line of your entire response MUST be exactly 'FINDINGS: yes' or 'FINDINGS: no'.
+             Use 'yes' if there is at least one issue worth addressing before merge; otherwise 'no'.
+             Do not write anything after that line."
+          FORMAT_DE="WICHTIGER AUSGABE-VERTRAG — exakt befolgen:
+          1) Schreibe deinen Review als Markdown (Abschnitte: Bugs, Sicherheit, Performance, Qualität).
+          2) Danach ein Block zwischen den Zeilen 'INLINE_COMMENTS_START' und 'INLINE_COMMENTS_END'.
+             Darin pro umsetzbarem Finding eine Zeile im Format:
+               FILE:<pfad> LINE:<Zeilennummer im NEUEN Stand> :: <kurzer Kommentar>
+             Nur Dateien/Zeilen verwenden, die im Diff vorkommen. Block weglassen, wenn keine Inline-Findings.
+          3) Die ALLERLETZTE Zeile der gesamten Antwort MUSS exakt 'FINDINGS: yes' oder 'FINDINGS: no' sein.
+             'yes' wenn mindestens ein vor dem Merge zu adressierendes Problem existiert, sonst 'no'.
+             Schreibe nichts nach dieser Zeile."
+
           if [ "$LANGUAGE" = "en" ]; then
-            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. Format your response as markdown with clear sections. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important."
+            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important.
+
+          $FORMAT_EN"
             USER_PROMPT="Please review this pull request:
 
           **Title:** $PR_TITLE
@@ -112,7 +161,9 @@ jobs:
           $PR_DIFF
           \`\`\`"
           else
-            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Formatiere deine Antwort als Markdown mit klaren Abschnitten. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig."
+            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig.
+
+          $FORMAT_DE"
             USER_PROMPT="Bitte reviewe diesen Pull Request:
 
           **Titel:** $PR_TITLE
@@ -126,6 +177,22 @@ jobs:
           \`\`\`"
           fi
 
+          # Kein API-Key gesetzt -> Review überspringen UND Gate NICHT blockieren.
+          # (Ein Repo ohne Key soll mergebar bleiben; das Gate greift nur, wo ein Review möglich ist.)
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "⚠️ ANTHROPIC_API_KEY nicht gesetzt – Review übersprungen, Gate offen."
+            echo "findings=no" >> "$GITHUB_OUTPUT"
+            EOF_SKIP="SKIP_$(date +%s)"
+            {
+              echo "review_text<<$EOF_SKIP"
+              echo "⚠️ *Review übersprungen: ANTHROPIC_API_KEY ist nicht als Repository-Secret gesetzt.*"
+              echo "$EOF_SKIP"
+            } >> "$GITHUB_OUTPUT"
+            echo "raw_text=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # API-Call; -f sorgt für non-zero exit bei HTTP-Fehler -> handled unten als Fallback.
           RESPONSE=$(curl -s -f \
             -X POST \
             -H "Content-Type: application/json" \
@@ -142,15 +209,47 @@ jobs:
                 system: $system,
                 messages: [{ role: "user", content: $user }]
               }')" \
-            "https://api.anthropic.com/v1/messages")
+            "https://api.anthropic.com/v1/messages") || true
 
-          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // "Review konnte nicht erstellt werden."')
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
+
+          # Findings-Marker bestimmen. Default = "yes" (sicher: blocken), wenn nicht eindeutig "no".
+          FINDINGS="yes"
+          if [ -z "$REVIEW_TEXT" ]; then
+            REVIEW_TEXT="⚠️ Review konnte nicht erstellt werden (leere/fehlerhafte API-Antwort). Gate bleibt zur Sicherheit gesperrt — bitte manuell prüfen und Label setzen."
+            FINDINGS="yes"
+          else
+            LAST_MARKER=$(printf '%s\n' "$REVIEW_TEXT" | grep -iE '^FINDINGS:[[:space:]]*(yes|no)[[:space:]]*$' | tail -1)
+            if printf '%s' "$LAST_MARKER" | grep -qiE 'no'; then
+              FINDINGS="no"
+            elif printf '%s' "$LAST_MARKER" | grep -qiE 'yes'; then
+              FINDINGS="yes"
+            else
+              # Marker fehlt/unparsebar -> sicher: blocken.
+              FINDINGS="yes"
+            fi
+          fi
+
+          echo "findings=$FINDINGS" >> "$GITHUB_OUTPUT"
+
+          # review_text (Marker- und Inline-Block aus dem sichtbaren Kommentar entfernen)
+          DISPLAY_TEXT=$(printf '%s\n' "$REVIEW_TEXT" \
+            | sed '/^INLINE_COMMENTS_START$/,/^INLINE_COMMENTS_END$/d' \
+            | sed '/^FINDINGS:[[:space:]]*\(yes\|no\)[[:space:]]*$/Id')
 
           EOF_MARKER="EOF_$(date +%s)"
           {
             echo "review_text<<$EOF_MARKER"
-            echo "$REVIEW_TEXT"
+            echo "$DISPLAY_TEXT"
             echo "$EOF_MARKER"
+          } >> "$GITHUB_OUTPUT"
+
+          # Rohtext (mit Inline-Block) für den Inline-Step durchreichen.
+          EOF_MARKER2="RAW_$(date +%s)"
+          {
+            echo "raw_text<<$EOF_MARKER2"
+            echo "$REVIEW_TEXT"
+            echo "$EOF_MARKER2"
           } >> "$GITHUB_OUTPUT"
 
       - name: Post review comment
@@ -159,11 +258,21 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REVIEW_TEXT: ${{ steps.review.outputs.review_text }}
           DIFF_CHARS: ${{ steps.diff.outputs.char_count }}
+          FINDINGS: ${{ steps.review.outputs.findings }}
           MODEL: ${{ inputs.model }}
+          ACK_LABEL: ${{ inputs.ack_label }}
         run: |
+          if [ "$FINDINGS" = "yes" ]; then
+            GATE_LINE="🔴 **Merge-Gate aktiv:** Es gibt Findings. Bitte lesen und anschließend das Label **\`$ACK_LABEL\`** setzen, um den Merge freizugeben."
+          else
+            GATE_LINE="🟢 **Merge-Gate:** keine Findings — Merge freigegeben."
+          fi
+
           COMMENT_BODY="## 🤖 Claude Code Review
 
           $REVIEW_TEXT
+
+          $GATE_LINE
 
           ---
           *Automatisch generiert von [reusable-pr-review.yml](https://github.com/S540d/project-templates/blob/main/.github/workflows/reusable-pr-review.yml) · Modell: \`$MODEL\` · Diff: ${DIFF_CHARS} Zeichen*"
@@ -171,3 +280,69 @@ jobs:
           gh pr comment "$PR_NUMBER" \
             --repo "$GITHUB_REPOSITORY" \
             --body "$COMMENT_BODY"
+
+      - name: Post inline review comments
+        if: steps.review.outputs.findings == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RAW_TEXT: ${{ steps.review.outputs.raw_text }}
+        run: |
+          # Inline-Block extrahieren und in Review-API-Kommentare übersetzen.
+          BLOCK=$(printf '%s\n' "$RAW_TEXT" \
+            | sed -n '/^INLINE_COMMENTS_START$/,/^INLINE_COMMENTS_END$/p' \
+            | sed '1d;$d')
+
+          if [ -z "$BLOCK" ]; then
+            echo "Keine Inline-Findings im Vertrag — Sammelkommentar genügt."
+            exit 0
+          fi
+
+          # Pro Zeile FILE:.. LINE:.. :: comment -> JSON-Comment-Objekt bauen.
+          COMMENTS=$(printf '%s\n' "$BLOCK" | jq -R -s '
+            split("\n")
+            | map(select(test("^FILE:")))
+            | map(
+                capture("^FILE:(?<path>.+?)[[:space:]]+LINE:(?<line>[0-9]+)[[:space:]]*::[[:space:]]*(?<body>.+)$")
+              )
+            | map({ path: (.path|gsub("^[[:space:]]+|[[:space:]]+$";"")), line: (.line|tonumber), side: "RIGHT", body: .body })
+          ')
+
+          COUNT=$(printf '%s' "$COMMENTS" | jq 'length')
+          if [ "$COUNT" -eq 0 ]; then
+            echo "Keine parsebaren Inline-Zeilen — Sammelkommentar genügt."
+            exit 0
+          fi
+
+          # Review mit Inline-Kommentaren anlegen (event=COMMENT, nicht REQUEST_CHANGES:
+          # Approvals zählen im Solo-Repo nicht als Gate; das Gate ist der Commit-Status).
+          PAYLOAD=$(jq -n --arg sha "$HEAD_SHA" --argjson comments "$COMMENTS" \
+            '{ commit_id: $sha, event: "COMMENT", body: "Claude: Inline-Findings (siehe Kommentare).", comments: $comments }')
+
+          # Best effort: ungültige Positionen ignorieren, Gate hängt nicht davon ab.
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" \
+            --method POST --input - <<< "$PAYLOAD" || \
+            echo "::warning::Inline-Kommentare konnten nicht (alle) gesetzt werden — Findings stehen im Sammelkommentar."
+
+      - name: Set review-gate commit status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          FINDINGS: ${{ steps.review.outputs.findings }}
+          ACK_LABEL: ${{ inputs.ack_label }}
+        run: |
+          # Default failure: wenn der findings-Output fehlt (z.B. Step abgebrochen) -> sicher blocken.
+          STATE="failure"
+          DESC="Findings — bitte lesen und Label '$ACK_LABEL' setzen"
+          if [ "$FINDINGS" = "no" ]; then
+            STATE="success"
+            DESC="Keine Findings — Merge freigegeben"
+          fi
+
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+            --method POST \
+            -f state="$STATE" \
+            -f context="review-gate" \
+            -f description="$DESC"

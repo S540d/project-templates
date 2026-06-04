@@ -266,4 +266,44 @@ git push origin v1.0.9
 
 ---
 
+## 🤖 Claude PR-Review als Merge-Gate (Hybrid)
+
+Jeder PR wird automatisch von Claude (Anthropic API) reviewt. Der Review ist ein
+**Pflicht-Gate vor dem Merge** über den required Status-Check **`review-gate`**.
+
+### Funktionsweise
+
+| Situation | `review-gate` | Merge | Aktion |
+|---|---|---|---|
+| Claude findet nichts | 🟢 grün | frei | keine — geht ohne Klick durch |
+| Claude findet etwas | 🔴 rot | gesperrt | Findings lesen (Inline-Kommentare) |
+| Findings quittiert | 🟢 grün | frei | Label setzen (s.u.) |
+
+- **Quittierung:** Label **`suggestions gelesen und verstanden`** am PR setzen → der Check
+  springt sofort auf grün (kein neuer Commit nötig).
+- **Re-Review:** Bei jedem neuen Push wird das Label automatisch entfernt → erneut quittieren.
+- **Sicherheit:** Bei API-Ausfall / fehlendem Findings-Marker bleibt der Check **rot**
+  (lieber blocken als ungeprüft durchwinken).
+
+### Einrichtung pro Repo
+
+1. Secret `ANTHROPIC_API_KEY` (Repo oder Org).
+2. Workflow `.github/workflows/pr-review.yml` (ruft `reusable-pr-review.yml@v1`,
+   braucht `permissions: pull-requests: write, contents: read, statuses: write`).
+3. Workflow `.github/workflows/review-gate-resolve.yml` (ruft
+   `reusable-review-gate-resolve.yml@v1`, Trigger `pull_request: [labeled, unlabeled]`).
+4. Label `suggestions gelesen und verstanden` anlegen:
+   ```bash
+   gh label create "suggestions gelesen und verstanden" --repo S540d/<REPO> \
+     --color FBCA04 --description "Claude-PR-Review gelesen + verstanden — Voraussetzung für Merge"
+   ```
+5. `review-gate` als required status check ins `protect-main`-Ruleset (siehe
+   `github-ruleset-protect-main-*.json`).
+
+> ⚠️ Den Ruleset-Check `review-gate` **erst** aktivieren, wenn die Workflows im Repo liegen
+> und der Check einmal gelaufen ist — sonst wartet GitHub auf einen nie laufenden Check und
+> blockiert jeden PR.
+
+---
+
 **Fragen?** Siehe Dokumentation oder lauf `./scripts/validate-release.sh` für Details.
