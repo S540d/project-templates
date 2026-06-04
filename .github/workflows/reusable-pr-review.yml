@@ -32,7 +32,7 @@ on:
         description: 'Claude-Modell für den Review'
         required: false
         type: string
-        default: 'claude-haiku-4-5-20251001'
+        default: 'claude-sonnet-4-6'
       max_diff_chars:
         description: 'Maximale Diff-Länge in Zeichen (Schutz vor zu langen API-Calls)'
         required: false
