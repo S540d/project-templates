@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+# ─────────────────────────────────────────────────────────────────────────
+# Pre-Commit Hook – React Native / Expo (Issue #7)
+# Reihenfolge: Basis-Security → RN-spezifische Checks → lint-staged
+# Installation: nach .husky/pre-commit kopieren (sh-kompatibel halten).
+# ─────────────────────────────────────────────────────────────────────────
+
+HOOK_DIR=$(dirname "$0")
+
+# 1. Basis-Security-Checks (Fingerprints, Tokens, sensible Dateien)
+if [ -f "$HOOK_DIR/pre-commit.base" ]; then
+  . "$HOOK_DIR/pre-commit.base" || exit 1
+fi
+
+echo "🔍 Running React Native pre-commit checks..."
+
+# 2. console.log / console.debug verbieten (außer in scripts/)
+# git grep --cached durchsucht den Index direkt → robust bei Spaces/Sonderzeichen,
+# kein leeres-xargs-Problem. Exit 0 = Treffer → blocken.
+if git grep --cached -nE 'console\.(log|debug)' -- \
+     '*.ts' '*.tsx' '*.js' '*.jsx' ':!scripts/**'; then
+  echo "❌ ERROR: console.log/debug in staged files (außer scripts/)."
+  exit 1
+fi
+
+# 3. Versionskonsistenz package.json ↔ app.json
+if git diff --cached --name-only | grep -Eq '(package\.json|app\.json)'; then
+  PKG=$(node -p "require('./package.json').version" 2>/dev/null)
+  APP=$(node -p "require('./app.json').expo.version" 2>/dev/null)
+  if [ -n "$PKG" ] && [ -n "$APP" ] && [ "$PKG" != "$APP" ]; then
+    echo "❌ ERROR: Version mismatch package.json ($PKG) ↔ app.json ($APP)."
+    exit 1
+  fi
+fi
+
+# 4. lint-staged (Flat Config + Stash-Bugfix aus Issue #289)
+if [ -f node_modules/.bin/lint-staged ]; then
+  npx lint-staged --stash false --no-warn-ignored || exit 1
+fi
+
+echo "✅ React Native pre-commit checks passed."

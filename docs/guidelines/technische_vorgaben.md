@@ -627,6 +627,125 @@ const isWeb = typeof window !== 'undefined';
 - **Git Tags:** Tag jede Release mit Version (`v1.0.0`)
 - **Release Notes:** Dokumentiere Breaking Changes deutlich
 
+### .claude/CLAUDE.md (PFLICHT für alle Projekte)
+
+**KRITISCH:** Jedes Projekt MUSS eine `.claude/CLAUDE.md` Datei enthalten, die kontinuierlich gepflegt wird.
+
+#### Zweck
+- Zentrale Wissensbasis für Claude Code CLI
+- Dokumentiert projekt-spezifische Konventionen, Workflows und Architekturen
+- Wird automatisch in Claude's Context geladen
+- Verhindert wiederholte Erklärungen und Fehler
+
+#### Mindestinhalt
+```markdown
+# Claude Code Instructions - [Projekt Name]
+
+## Project Overview
+[Kurze Beschreibung des Projekts]
+
+**Tech Stack:**
+- [Framework/Library]
+- [Language]
+- [Key Dependencies]
+
+## Key Project Documents
+- [Verweis auf wichtige Docs wie ARCHITECTURE.md, BUILD.md, etc.]
+
+## Workflow & Git Management
+- Branch Strategy
+- PR Workflow
+- Review-Prozess
+
+## Development Guidelines
+- Code Style
+- Testing Strategy
+- Common Pitfalls
+
+## Common Tasks
+- [Häufige Aufgaben mit Beispiel-Commands]
+```
+
+#### Update-Strategie
+- Bei **jedem** größeren Architektur-Change aktualisieren
+- Neue Patterns und Best Practices dokumentieren
+- Anti-Patterns und häufige Fehler aufnehmen
+- Mindestens einmal pro Release-Zyklus reviewen
+
+#### Referenz-Implementierung
+Siehe: [EnergyPriceGermany/.claude/CLAUDE.md](https://github.com/S540d/Energy_Price_Germany/blob/main/.claude/CLAUDE.md)
+
+### .claude/commands/ (Empfohlen)
+
+**Standard Commands für wiederkehrende Workflows:**
+
+Jedes Projekt sollte mindestens diese Commands haben:
+- `aufräumen` - Tagesabschluss: Cleanup, Branch-Management, Status-Report
+- `pr-review` - PR prüfen, Suggestions umsetzen, Merge vorbereiten
+- `dependency-update` - Dependencies aktualisieren mit Sicherheitsprüfung
+
+Weitere sinnvolle Commands siehe [.claude/commands Template](./automation-templates/.claude/commands/)
+
+---
+
+## Internationalisierung & Spracherkennung
+
+### Automatische Spracherkennung (PFLICHT)
+
+**KRITISCH:** Apps MÜSSEN automatische Spracherkennung unterstützen. Nutzer sollten NICHT manuell zwischen Sprachen wechseln müssen.
+
+#### Implementation (React Native/Expo)
+```typescript
+import * as Localization from 'expo-localization';
+
+// Automatische Spracherkennung beim App-Start
+const detectLanguage = (): 'en' | 'de' => {
+  const deviceLanguage = Localization.locale.split('-')[0]; // 'de-DE' -> 'de'
+
+  // Fallback zu Englisch wenn Sprache nicht unterstützt
+  return ['en', 'de'].includes(deviceLanguage)
+    ? deviceLanguage as 'en' | 'de'
+    : 'en';
+};
+
+// Beim App-Start
+const [language, setLanguage] = useState<'en' | 'de'>(detectLanguage());
+```
+
+#### Implementation (Web)
+```javascript
+// Browser Sprache erkennen
+const detectLanguage = () => {
+  const browserLang = navigator.language.split('-')[0]; // 'de-DE' -> 'de'
+  return ['en', 'de'].includes(browserLang) ? browserLang : 'en';
+};
+
+// LocalStorage für Override
+const savedLang = localStorage.getItem('language');
+const language = savedLang || detectLanguage();
+```
+
+#### Best Practices
+- **Automatisch beim Start:** Nutze Device/Browser Sprache als Initial Value
+- **Persistierung:** Speichere manuelle Änderungen in AsyncStorage/localStorage
+- **Manual Override:** Biete Settings-Option für manuelle Sprachwahl
+- **Fallback:** Standardsprache ist Englisch wenn Device-Sprache nicht unterstützt
+- **Keine Flags:** Nutze Text-Labels ("English", "Deutsch") statt Flaggen (politisch neutral)
+
+#### Checkliste
+- [ ] Expo Localization oder Browser API implementiert
+- [ ] Automatische Spracherkennung beim App-Start
+- [ ] Manual Override in Settings möglich
+- [ ] Sprach-Präferenz persistiert
+- [ ] Fallback zu Englisch definiert
+- [ ] Alle UI-Texte übersetzt (keine hartcodierten Strings)
+
+#### Anti-Patterns
+- ❌ **Keine automatische Spracherkennung** - Nutzer muss manuell wählen
+- ❌ **Hartcodierte Sprache** - App immer auf Englisch
+- ❌ **Flaggen als Sprach-Symbole** - Politisch problematisch
+- ❌ **Fehlende Persistierung** - Sprache bei jedem Start neu wählen
+
 ---
 
 ## Checkliste vor Production Deploy

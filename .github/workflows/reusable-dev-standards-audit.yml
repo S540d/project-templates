@@ -1,0 +1,55 @@
+name: Reusable Dev-Standards Audit
+
+# NON-BLOCKING Audit (Issue #7): meldet Abweichungen von den Dev-Standards,
+# bricht den Build aber NICHT ab. Aufruf versioniert (@v1):
+#
+#   jobs:
+#     standards:
+#       uses: S540d/project-templates/.github/workflows/reusable-dev-standards-audit.yml@v1
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  dev-standards-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit Dev-Standards (non-blocking)
+        shell: bash
+        run: |
+          # Bewusst non-blocking: nur Hinweise, kein exit 1.
+          check() {
+            if [ -e "$1" ]; then
+              echo "✅ $1 vorhanden"
+            else
+              echo "::warning title=Standard fehlt::$1 fehlt ($2)"
+            fi
+          }
+
+          echo "::group::Dev-Standards Audit"
+          check ".prettierrc.json"   "Prettier-Config (sync-standards.sh)"
+          check ".editorconfig"      "EditorConfig (sync-standards.sh)"
+          check ".husky/pre-commit"  "Husky Pre-Commit Hook"
+
+          # ESLint: FlatConfig bevorzugt, Legacy nur Hinweis
+          if [ -e "eslint.config.mjs" ] || [ -e "eslint.config.js" ]; then
+            echo "✅ ESLint FlatConfig vorhanden"
+          elif [ -e ".eslintrc.js" ] || [ -e ".eslintrc.json" ]; then
+            echo "::warning title=Legacy ESLint::.eslintrc gefunden – auf FlatConfig migrieren (Issue #7)"
+          else
+            echo "::warning title=Kein ESLint::Keine ESLint-Config gefunden"
+          fi
+
+          # GLOBAL POLICY in CLAUDE.md?
+          if [ -f "CLAUDE.md" ] && grep -Fq "GLOBAL POLICY:START" CLAUDE.md; then
+            echo "✅ GLOBAL POLICY in CLAUDE.md synchronisiert"
+          else
+            echo "::warning title=GLOBAL POLICY fehlt::sync-standards.sh ausführen"
+          fi
+          echo "::endgroup::"

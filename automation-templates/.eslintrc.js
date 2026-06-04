@@ -1,3 +1,6 @@
+// ⚠️ DEPRECATED (Issue #7): Legacy ESLint-Format (.eslintrc).
+// Source of Truth ist jetzt dev-standards/{react-native,web}/eslint.config.base.mjs (Flat Config, ESLint 9).
+// Diese Datei nur noch für Projekte, die ESLint 8 / Legacy-Config nutzen. Nicht erweitern.
 module.exports = {
   root: true,
   extends: [
