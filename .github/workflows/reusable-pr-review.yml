@@ -1,0 +1,173 @@
+name: Reusable PR Review (Claude)
+
+# Automatischer Code-Review via Anthropic API. Aufruf versioniert (@v1):
+#
+#   jobs:
+#     pr-review:
+#       uses: S540d/project-templates/.github/workflows/reusable-pr-review.yml@v1
+#       secrets:
+#         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+#       with:
+#         # Optional: Sprache des Reviews (default: de)
+#         language: 'de'
+#
+# Voraussetzungen:
+#   - Secret ANTHROPIC_API_KEY im Repo oder als Org-Secret
+#   - Trigger: pull_request (opened, synchronize, reopened)
+#
+# Permissions im aufrufenden Workflow:
+#   permissions:
+#     pull-requests: write
+#     contents: read
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: 'Sprache des Reviews (de oder en)'
+        required: false
+        type: string
+        default: 'de'
+      model:
+        description: 'Claude-Modell für den Review'
+        required: false
+        type: string
+        default: 'claude-haiku-4-5-20251001'
+      max_diff_chars:
+        description: 'Maximale Diff-Länge in Zeichen (Schutz vor zu langen API-Calls)'
+        required: false
+        type: number
+        default: 40000
+    secrets:
+      anthropic_api_key:
+        description: 'Anthropic API Key'
+        required: true
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    # Nur auf PRs ausführen (nicht auf workflow_dispatch etc.)
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MAX_CHARS: ${{ inputs.max_diff_chars }}
+        run: |
+          DIFF=$(git diff "$BASE_SHA" "$HEAD_SHA" -- \
+            ':!*.lock' ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' \
+            ':!*.snap' ':!public/marketdata.json' ':!public/data/history/*' \
+            2>/dev/null || echo "")
+
+          # Kürzen wenn zu lang
+          CHAR_COUNT=${#DIFF}
+          if [ "$CHAR_COUNT" -gt "$MAX_CHARS" ]; then
+            DIFF="${DIFF:0:$MAX_CHARS}"$'\n\n[... Diff gekürzt bei '"$MAX_CHARS"' Zeichen ...]'
+          fi
+
+          # Multiline-safe via Delimiter
+          EOF_MARKER="EOF_$(date +%s)"
+          {
+            echo "diff<<$EOF_MARKER"
+            echo "$DIFF"
+            echo "$EOF_MARKER"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "char_count=$CHAR_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.anthropic_api_key }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_DIFF: ${{ steps.diff.outputs.diff }}
+          LANGUAGE: ${{ inputs.language }}
+          MODEL: ${{ inputs.model }}
+        run: |
+          if [ "$LANGUAGE" = "en" ]; then
+            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. Format your response as markdown with clear sections. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important."
+            USER_PROMPT="Please review this pull request:
+
+          **Title:** $PR_TITLE
+
+          **Description:**
+          $PR_BODY
+
+          **Diff:**
+          \`\`\`diff
+          $PR_DIFF
+          \`\`\`"
+          else
+            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Formatiere deine Antwort als Markdown mit klaren Abschnitten. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig."
+            USER_PROMPT="Bitte reviewe diesen Pull Request:
+
+          **Titel:** $PR_TITLE
+
+          **Beschreibung:**
+          $PR_BODY
+
+          **Diff:**
+          \`\`\`diff
+          $PR_DIFF
+          \`\`\`"
+          fi
+
+          RESPONSE=$(curl -s -f \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            --max-time 120 \
+            --data "$(jq -n \
+              --arg model "$MODEL" \
+              --arg system "$SYSTEM_PROMPT" \
+              --arg user "$USER_PROMPT" \
+              '{
+                model: $model,
+                max_tokens: 2048,
+                system: $system,
+                messages: [{ role: "user", content: $user }]
+              }')" \
+            "https://api.anthropic.com/v1/messages")
+
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // "Review konnte nicht erstellt werden."')
+
+          EOF_MARKER="EOF_$(date +%s)"
+          {
+            echo "review_text<<$EOF_MARKER"
+            echo "$REVIEW_TEXT"
+            echo "$EOF_MARKER"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_TEXT: ${{ steps.review.outputs.review_text }}
+          DIFF_CHARS: ${{ steps.diff.outputs.char_count }}
+          MODEL: ${{ inputs.model }}
+        run: |
+          COMMENT_BODY="## 🤖 Claude Code Review
+
+          $REVIEW_TEXT
+
+          ---
+          *Automatisch generiert von [reusable-pr-review.yml](https://github.com/S540d/project-templates/blob/main/.github/workflows/reusable-pr-review.yml) · Modell: \`$MODEL\` · Diff: ${DIFF_CHARS} Zeichen*"
+
+          gh pr comment "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --body "$COMMENT_BODY"
