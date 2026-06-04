@@ -5,7 +5,8 @@
   "conditions": {
     "ref_name": {
       "include": [
-        "refs/heads/main"
+        "refs/heads/main",
+        "refs/heads/testing"
       ],
       "exclude": []
     }
@@ -16,6 +17,13 @@
     },
     {
       "type": "non_fast_forward"
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [],
+        "strict_required_status_checks_policy": false
+      }
     }
   ],
   "bypass_actors": [

@@ -7,6 +7,8 @@
 - Merge auf `main` nur mit expliziter schriftlicher Freigabe
 - `--delete-branch` nur für Feature-Branches (nie staging/testing)
 - `--no-verify` nur auf explizite Bitte
+- **Vor jedem Push: lokale Tests ausführen** (`npm test` bzw. projektspezifischer Test-Befehl) – kein Push ohne grüne lokale Tests
+- **Kein Merge bei CI-Fail** – Branch Protection erzwingt das technisch; nie mit `--admin` umgehen außer auf explizite Bitte
 
 ## [ANDROID BUILD – PFLICHTREGELN]
 
