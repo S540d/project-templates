@@ -17,13 +17,6 @@
     },
     {
       "type": "non_fast_forward"
-    },
-    {
-      "type": "required_status_checks",
-      "parameters": {
-        "required_status_checks": [],
-        "strict_required_status_checks_policy": false
-      }
     }
   ],
   "bypass_actors": [
