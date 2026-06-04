@@ -36,6 +36,26 @@ gh pr create --base testing --title "Fix #XXX: ..." --body "..."
 - Merge auf main braucht `--admin` (Branch Protection)
 - `--no-verify` und `--admin` nur auf explizite Bitte
 
+## CLAUDE.md Standard
+
+Alle Repos folgen diesem einheitlichen Schema:
+
+| Datei | Status | Zweck |
+|---|---|---|
+| `CLAUDE.md` (Root) | **committet** | Projektinstruktionen für Claude — öffentlich, versioniert |
+| `.claude/` | **gitignored** | Lokale Commands, Settings, Daten — nie committen |
+
+### `.gitignore`-Pflichtzeile
+Jedes Repo muss in `.gitignore` enthalten:
+```
+# Claude Code local files (commands, settings – never commit)
+.claude/
+```
+
+### Warum
+- `CLAUDE.md` im Root wird von Claude Code automatisch gelesen und ist für alle Entwickler sichtbar
+- `.claude/` enthält lokale Commands und Settings, die gerätespezifisch sind und nicht ins Repo gehören
+
 ## Automatischer PR-Review
 Alle Repos haben `pr-review.yml` — Claude postet automatisch einen Review-Kommentar.
 Voraussetzung: `ANTHROPIC_API_KEY` als Repository-Secret.
