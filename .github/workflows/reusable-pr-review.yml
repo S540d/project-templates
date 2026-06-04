@@ -54,7 +54,7 @@ on:
     secrets:
       anthropic_api_key:
         description: 'Anthropic API Key'
-        required: true
+        required: false
 
 permissions:
   pull-requests: write
@@ -175,6 +175,21 @@ jobs:
           \`\`\`diff
           $PR_DIFF
           \`\`\`"
+          fi
+
+          # Kein API-Key gesetzt -> Review überspringen UND Gate NICHT blockieren.
+          # (Ein Repo ohne Key soll mergebar bleiben; das Gate greift nur, wo ein Review möglich ist.)
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "⚠️ ANTHROPIC_API_KEY nicht gesetzt – Review übersprungen, Gate offen."
+            echo "findings=no" >> "$GITHUB_OUTPUT"
+            EOF_SKIP="SKIP_$(date +%s)"
+            {
+              echo "review_text<<$EOF_SKIP"
+              echo "⚠️ *Review übersprungen: ANTHROPIC_API_KEY ist nicht als Repository-Secret gesetzt.*"
+              echo "$EOF_SKIP"
+            } >> "$GITHUB_OUTPUT"
+            echo "raw_text=" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           # API-Call; -f sorgt für non-zero exit bei HTTP-Fehler -> handled unten als Fallback.
