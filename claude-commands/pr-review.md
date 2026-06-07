@@ -16,7 +16,7 @@ Einen Pull Request gründlich prüfen, Code-Review-Suggestions umsetzen und für
 
 ### 1. PR Status prüfen
 - Zeige PR-Details (Titel, Beschreibung, Files Changed)
-- Prüfe ob PR-Ziel-Branch aktuell ist mit main/staging
+- Prüfe ob PR-Ziel-Branch aktuell ist mit main (kein staging – GLOBAL POLICY)
 - Falls outdated: Frage ob Target-Branch in PR-Branch gemergt werden soll
 - Prüfe CI/CD Status (Tests, Linting, Build)
 - Zeige offene Review-Comments
@@ -52,24 +52,47 @@ Einen Pull Request gründlich prüfen, Code-Review-Suggestions umsetzen und für
 - Falls neue Features/Breaking Changes: Schlage CHANGELOG-Eintrag vor
 - Prüfe ob README/Docs aktualisiert werden müssen
 
-### 6. Merge vorbereiten
-- Prüfe ob alle Checks grün sind
-- Prüfe ob mindestens 1 Approval vorhanden (falls erforderlich)
+### 6. Merge-Gate (review-gate) – automatischer Claude-Review
+
+Der Workflow `reusable-pr-review.yml` reviewt den PR automatisch und setzt den
+required Status-Check **`review-gate`**:
+
+- **Keine Findings → grün** → Merge sofort frei.
+- **Findings → rot** + Inline-Kommentare am PR.
+
+Bei Findings:
+1. Lies die Findings, setze sinnvolle um (neuer Push → Re-Review läuft erneut,
+   das Ack-Label wird dabei automatisch entfernt).
+2. **Der Mensch setzt das Label `suggestions gelesen und verstanden`** → der Gate
+   wird grün (`reusable-review-gate-resolve.yml`).
+
+> ⚠️ **Claude setzt das Ack-Label NIEMALS selbst.** Das ist die menschliche
+> Quittierung der Findings und der einzige saubere Weg, den roten Gate zu
+> öffnen. Solange der Gate rot ist und kein Label gesetzt wurde: **nicht mergen.**
+
+### 7. Merge vorbereiten
+- Prüfe ob alle Checks grün sind (inkl. `review-gate`)
 - Zeige Merge-Status (Ready to merge? Conflicts?)
 - Falls Konflikte: Zeige betroffene Files
 
-### 7. Merge durchführen (nur wenn bestätigt)
+### 8. Merge durchführen (nur wenn bestätigt)
 **WICHTIG:** Vor Merge nochmal bestätigen lassen!
 
-- Merge-Strategie wählen:
-  - **Squash Merge** (empfohlen für Feature-Branches)
-  - **Merge Commit** (für Release-Branches)
-  - **Rebase Merge** (für saubere Historie)
-- PR mergen via `gh pr merge [PR-Number] --[strategy]`
-- Feature-Branch löschen (lokal und remote)
+**Standardfall `feature → testing` (KEIN `--admin`):**
+- Sobald alle Checks grün sind (review-gate grün durch Label oder „keine Findings"),
+  ist **kein** `--admin` nötig — das `protect-main`-Ruleset verlangt 0 Approvals.
+- Merge: `gh pr merge <nr> --squash --delete-branch`
 - Ausgabe: "✅ PR #XX successfully merged and branch deleted"
 
-### 8. Post-Merge Cleanup
+**Sonderfall `testing → main` (`--admin`, nur mit Freigabe):**
+- Der Default-Branch `main` liegt unter einem zusätzlichen Ruleset (`Main`), das
+  **1 Approval** verlangt. Als Solo-Dev kann man den eigenen PR nicht approven →
+  dieser eine Block ist nur per Admin-Bypass lösbar. Das ist der **bewusste
+  manuelle Release-Schritt**, NICHT mit dem `review-gate` zu verwechseln.
+- Merge: `gh pr merge <nr> --squash --admin` (kein `--delete-branch` für langlebige Branches!)
+- **Nur mit expliziter schriftlicher Freigabe** (siehe GLOBAL POLICY oben).
+
+### 9. Post-Merge Cleanup
 - Checkout zurück zu main/staging/testing
 - Pull neueste Änderungen
 - Zeige nächste offene PRs (falls vorhanden)
@@ -108,8 +131,8 @@ Einen Pull Request gründlich prüfen, Code-Review-Suggestions umsetzen und für
 **KRITISCH - NIEMALS automatisch mergen wenn:**
 - ❌ CI/CD Tests fehlgeschlagen
 - ❌ Merge Conflicts vorhanden
-- ❌ Keine Approvals (falls erforderlich)
-- ❌ Target-Branch ist `main` oder `production` (extra Vorsicht!)
+- ❌ `review-gate` ist rot und kein Ack-Label gesetzt (auf menschliche Quittierung warten)
+- ❌ Target-Branch ist `main` oder `production` (extra Vorsicht, nur mit Freigabe + `--admin`)
 
 **Immer fragen vor:**
 - Breaking Changes
