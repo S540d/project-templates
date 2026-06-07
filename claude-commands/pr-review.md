@@ -16,7 +16,7 @@ Einen Pull Request gründlich prüfen, Code-Review-Suggestions umsetzen und für
 
 ### 1. PR Status prüfen
 - Zeige PR-Details (Titel, Beschreibung, Files Changed)
-- Prüfe ob PR-Ziel-Branch aktuell ist mit main/staging
+- Prüfe ob PR-Ziel-Branch aktuell ist mit main (kein staging – GLOBAL POLICY)
 - Falls outdated: Frage ob Target-Branch in PR-Branch gemergt werden soll
 - Prüfe CI/CD Status (Tests, Linting, Build)
 - Zeige offene Review-Comments
