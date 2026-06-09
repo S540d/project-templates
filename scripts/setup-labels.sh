@@ -40,6 +40,10 @@ create_label "priority: low" "5fde5d" "Kann warten"
 create_label "blocked" "3d3d3d" "Blockiert - wartet auf etwas"
 create_label "ready-for-implementation" "34b13e" "Ready - kann angefangen werden"
 
+# PR-Review-Gate Labels (automatisch vom Claude-Review-Workflow gesetzt)
+create_label "ready to merge" "0e8a16" "Review sauber/aufgelöst - Merge kann manuell erfolgen"
+create_label "needs human review" "d93f0b" "Findings brauchen menschliche Entscheidung - bitte prüfen"
+
 # Delete GitHub default labels (optional)
 echo ""
 echo "Removing GitHub default labels..."
@@ -56,6 +60,9 @@ gh label delete "prio" --repo "$REPO" --yes 2>/dev/null || true
 gh label delete "high-priority" --repo "$REPO" --yes 2>/dev/null || true
 gh label delete "ui/ux" --repo "$REPO" --yes 2>/dev/null || true
 gh label delete "design" --repo "$REPO" --yes 2>/dev/null || true
+
+# Obsoletes Ack-Label des alten manuellen Review-Gates (durch Autofix-Flow ersetzt)
+gh label delete "suggestions gelesen und verstanden" --repo "$REPO" --yes 2>/dev/null || true
 
 echo ""
 echo "✅ Labels setup complete for $REPO!"

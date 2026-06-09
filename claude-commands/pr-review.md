@@ -52,23 +52,21 @@ Einen Pull Request gründlich prüfen, Code-Review-Suggestions umsetzen und für
 - Falls neue Features/Breaking Changes: Schlage CHANGELOG-Eintrag vor
 - Prüfe ob README/Docs aktualisiert werden müssen
 
-### 6. Merge-Gate (review-gate) – automatischer Claude-Review
+### 6. Merge-Gate (review-gate) – automatischer Claude-Review + Autofix
 
-Der Workflow `reusable-pr-review.yml` reviewt den PR automatisch und setzt den
-required Status-Check **`review-gate`**:
+Der Workflow `reusable-pr-review.yml` korrigiert den PR automatisch und reviewt
+den End-Stand, dann setzt er den required Status-Check **`review-gate`** und ein Label:
 
-- **Keine Findings → grün** → Merge sofort frei.
-- **Findings → rot** + Inline-Kommentare am PR.
+1. **Autofix:** Ein Claude-Agent fixt alle umsetzbaren Findings selbst (Commit `[auto]` + Push).
+2. **Review:** bewertet den korrigierten Stand:
+   - **Keine offenen Findings → grün** + Label `ready to merge` → Merge frei.
+   - **Findings übrig → rot** + Inline-Kommentare + Label `needs human review`.
 
-Bei Findings:
-1. Lies die Findings, setze sinnvolle um (neuer Push → Re-Review läuft erneut,
-   das Ack-Label wird dabei automatisch entfernt).
-2. **Der Mensch setzt das Label `suggestions gelesen und verstanden`** → der Gate
-   wird grün (`reusable-review-gate-resolve.yml`).
+Bei `needs human review`: Findings lesen, klären/umsetzen, pushen → frischer Lauf.
 
-> ⚠️ **Claude setzt das Ack-Label NIEMALS selbst.** Das ist die menschliche
-> Quittierung der Findings und der einzige saubere Weg, den roten Gate zu
-> öffnen. Solange der Gate rot ist und kein Label gesetzt wurde: **nicht mergen.**
+> ⚠️ Es gibt **kein** manuelles Quittierungs-Label mehr. Den roten Gate öffnet nur
+> ein sauberer Review (alle Findings gelöst). Solange `needs human review` gesetzt
+> ist: **nicht mergen**, bis die offenen Punkte geklärt sind.
 
 ### 7. Merge vorbereiten
 - Prüfe ob alle Checks grün sind (inkl. `review-gate`)
@@ -79,7 +77,7 @@ Bei Findings:
 **WICHTIG:** Vor Merge nochmal bestätigen lassen!
 
 **Standardfall `feature → testing` (KEIN `--admin`):**
-- Sobald alle Checks grün sind (review-gate grün durch Label oder „keine Findings"),
+- Sobald alle Checks grün sind (review-gate grün / Label `ready to merge`),
   ist **kein** `--admin` nötig — das `protect-main`-Ruleset verlangt 0 Approvals.
 - Merge: `gh pr merge <nr> --squash --delete-branch`
 - Ausgabe: "✅ PR #XX successfully merged and branch deleted"
@@ -131,7 +129,7 @@ Bei Findings:
 **KRITISCH - NIEMALS automatisch mergen wenn:**
 - ❌ CI/CD Tests fehlgeschlagen
 - ❌ Merge Conflicts vorhanden
-- ❌ `review-gate` ist rot und kein Ack-Label gesetzt (auf menschliche Quittierung warten)
+- ❌ `review-gate` ist rot bzw. Label `needs human review` gesetzt (offene Findings erst klären)
 - ❌ Target-Branch ist `main` oder `production` (extra Vorsicht, nur mit Freigabe + `--admin`)
 
 **Immer fragen vor:**
