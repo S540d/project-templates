@@ -60,8 +60,7 @@ feature/issue-XXX → testing → main
 
 - PRs immer gegen `testing` (nie direkt `main`)
 - Merge feature→testing: `gh pr merge --squash --delete-branch`
-- Merge testing→main: `gh pr merge --squash` (kein `--delete-branch`!)
-- main braucht `--admin`
+- Merge testing→main: `gh pr merge --squash --admin` (kein `--delete-branch`!)
 
 Vollständig dokumentiert in `dev-standards/global-policy.md`.
 
