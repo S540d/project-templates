@@ -1,6 +1,6 @@
 name: Reusable PR Review (Claude)
 
-# Automatischer Code-Review via Anthropic API + Merge-Gate. Aufruf versioniert (@v1):
+# Vollautomatischer Review-Prozess. Aufruf versioniert (@v1):
 #
 #   jobs:
 #     pr-review:
@@ -10,23 +10,30 @@ name: Reusable PR Review (Claude)
 #       with:
 #         language: 'de'
 #
+# Ablauf (zwei Jobs in EINEM Run):
+#   1) autofix  – Claude-Agent (anthropics/claude-code-action) reviewt den PR und
+#                 korrigiert ALLE umsetzbaren Findings selbst (Commit "[auto]" + Push
+#                 auf den PR-Branch). Iteriert intern via --max-turns.
+#   2) review   – deterministischer Claude-Review des END-Stands: postet den Review-
+#                 Kommentar (+ Inline-Findings), setzt den Commit-Status "review-gate"
+#                 auf den finalen HEAD und vergibt das Status-Label:
+#                   - keine Findings  -> "ready to merge"     (Mensch merged manuell)
+#                   - Findings übrig  -> "needs human review" (menschliche Entscheidung)
+#
 # Voraussetzungen:
-#   - Secret ANTHROPIC_API_KEY im Repo oder als Org-Secret
-#   - Trigger: pull_request (opened, synchronize, reopened)
+#   - Secret ANTHROPIC_API_KEY (Repo oder Org)
+#   - Trigger im Caller: pull_request (opened, synchronize, reopened)
+#   - permissions im Caller:
+#       contents: write        # Autofix-Commits pushen
+#       pull-requests: write    # Review-Kommentare + Labels
+#       statuses: write         # Commit-Status "review-gate"
 #
-# Permissions im aufrufenden Workflow:
-#   permissions:
-#     pull-requests: write   # Review-Kommentare + Label entfernen
-#     contents: read
-#     statuses: write        # Commit-Status "review-gate"
-#
-# Merge-Gate (Hybrid):
-#   - Claude analysiert den Diff und schließt die Antwort mit "FINDINGS: yes|no" ab.
-#   - Findings  -> Inline-Review-Kommentare + Commit-Status "review-gate" = failure (rot).
-#   - Keine     -> Commit-Status "review-gate" = success (grün), Merge sofort frei.
-#   - Parse-Fehler / leere API-Antwort -> failure (sicher: lieber blocken).
-#   - Bei "synchronize" (neuer Commit) wird das Ack-Label entfernt -> Re-Review erzwungen.
-#   Das Label-Setzen wird von reusable-review-gate-resolve.yml in success umgesetzt.
+# Schleifenschutz / Sicherheit:
+#   - Der Autofix-Push nutzt GITHUB_TOKEN -> löst KEINEN neuen pull_request-Run aus.
+#     Pro PR-Event genau ein Durchlauf; der Agent iteriert innerhalb des Runs.
+#   - Forks: kein Autofix (Secrets/Schreibrechte stehen Forks nicht zur Verfügung).
+#   - review läuft immer (always()) – auch wenn autofix übersprungen wurde oder
+#     fehlschlug. Bei API-Ausfall / fehlendem Findings-Marker bleibt das Gate ROT.
 
 on:
   workflow_call:
@@ -37,7 +44,7 @@ on:
         type: string
         default: 'de'
       model:
-        description: 'Claude-Modell für den Review'
+        description: 'Claude-Modell für Review und Autofix'
         required: false
         type: string
         default: 'claude-sonnet-4-6'
@@ -46,50 +53,107 @@ on:
         required: false
         type: number
         default: 40000
-      ack_label:
-        description: 'Label, mit dem ein Mensch den Review quittiert (löst das Gate)'
+      autofix:
+        description: 'Autonome PR-Korrektur durch Claude aktivieren'
+        required: false
+        type: boolean
+        default: true
+      max_turns:
+        description: 'Maximale Agenten-Iterationen im Autofix-Schritt'
+        required: false
+        type: number
+        default: 15
+      ready_label:
+        description: 'Label, das gesetzt wird, wenn der Review sauber ist'
         required: false
         type: string
-        default: 'suggestions gelesen und verstanden'
+        default: 'ready to merge'
+      attention_label:
+        description: 'Label, das gesetzt wird, wenn Findings menschliche Entscheidung brauchen'
+        required: false
+        type: string
+        default: 'needs human review'
     secrets:
       anthropic_api_key:
         description: 'Anthropic API Key'
         required: false
 
 permissions:
+  contents: write
   pull-requests: write
-  contents: read
   statuses: write
 
 jobs:
-  claude-review:
+  # ---------------------------------------------------------------------------
+  # 1) Autonome Korrektur: Agent reviewt + fixt + pusht.
+  # ---------------------------------------------------------------------------
+  autofix:
     runs-on: ubuntu-latest
-    # Nur auf PRs ausführen (nicht auf workflow_dispatch etc.)
-    if: github.event_name == 'pull_request'
+    if: >-
+      github.event_name == 'pull_request' &&
+      inputs.autofix &&
+      github.event.pull_request.head.repo.fork == false
     steps:
-      - name: Checkout
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Reset acknowledgement label on new commit
-        # Bei neuem Push muss erneut quittiert werden (nachträgliche Findings nicht durchwinken).
-        if: github.event.action == 'synchronize'
+      - name: Claude autofix
+        # Ohne API-Key kein Autofix – der review-Job blockiert das Gate dann nicht
+        # (graceful skip), damit Repos ohne Key mergebar bleiben.
+        if: ${{ secrets.anthropic_api_key != '' }}
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          prompt: |
+            Du bist ein erfahrener Code-Reviewer mit Schreibzugriff auf diesen Pull Request.
+            Prüfe die Änderungen dieses PRs auf:
+              1) Korrektheitsfehler, 2) Sicherheitsprobleme,
+              3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit.
+            Korrigiere JEDES umsetzbare Finding direkt im Code. Arbeite iterativ:
+            analysieren -> fixen -> (falls vorhanden) Tests/Linter prüfen -> wiederholen,
+            bis keine umsetzbaren Findings mehr übrig sind.
+            Committe deine Änderungen in klaren, kleinen Commits mit dem Marker "[auto]"
+            im Commit-Titel und pushe sie auf den aktuellen PR-Branch.
+            Findings, die eine menschliche Architektur- oder Produktentscheidung erfordern
+            oder mehrdeutig sind, NICHT erzwingen — kurz benennen und dem Menschen überlassen.
+            Nimm keine unnötigen kosmetischen Änderungen vor.
+          claude_args: |
+            --model ${{ inputs.model }}
+            --max-turns ${{ inputs.max_turns }}
+            --allowedTools "Bash(git:*),Bash(npm:*),Bash(npx:*),Edit,Write,Read,Grep,Glob"
+
+  # ---------------------------------------------------------------------------
+  # 2) Deterministischer Review des END-Stands + Gate + Label.
+  # ---------------------------------------------------------------------------
+  review:
+    needs: autofix
+    # always(): läuft auch, wenn autofix übersprungen (Fork/disabled) wurde oder fehlschlug.
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch (post-autofix)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Resolve head SHA
+        id: sha
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          ACK_LABEL: ${{ inputs.ack_label }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-            --remove-label "$ACK_LABEL" 2>/dev/null || true
+          # Basis-Commit sicher verfügbar machen (kann hinter dem Branch liegen).
+          git fetch --no-tags origin "$BASE_SHA" 2>/dev/null || true
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Get PR diff
         id: diff
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ steps.sha.outputs.head }}
           MAX_CHARS: ${{ inputs.max_diff_chars }}
         run: |
           DIFF=$(git diff "$BASE_SHA" "$HEAD_SHA" -- \
@@ -146,7 +210,7 @@ jobs:
              Schreibe nichts nach dieser Zeile."
 
           if [ "$LANGUAGE" = "en" ]; then
-            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important.
+            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important. Note: actionable findings may already have been auto-fixed before this review; only report what is still open.
 
           $FORMAT_EN"
             USER_PROMPT="Please review this pull request:
@@ -161,7 +225,7 @@ jobs:
           $PR_DIFF
           \`\`\`"
           else
-            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig.
+            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig. Hinweis: umsetzbare Findings wurden ggf. vor diesem Review bereits automatisch korrigiert; melde nur, was noch offen ist.
 
           $FORMAT_DE"
             USER_PROMPT="Bitte reviewe diesen Pull Request:
@@ -182,6 +246,7 @@ jobs:
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "⚠️ ANTHROPIC_API_KEY nicht gesetzt – Review übersprungen, Gate offen."
             echo "findings=no" >> "$GITHUB_OUTPUT"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
             EOF_SKIP="SKIP_$(date +%s)"
             {
               echo "review_text<<$EOF_SKIP"
@@ -191,6 +256,7 @@ jobs:
             echo "raw_text=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
 
           # API-Call; -f sorgt für non-zero exit bei HTTP-Fehler -> handled unten als Fallback.
           RESPONSE=$(curl -s -f \
@@ -216,7 +282,7 @@ jobs:
           # Findings-Marker bestimmen. Default = "yes" (sicher: blocken), wenn nicht eindeutig "no".
           FINDINGS="yes"
           if [ -z "$REVIEW_TEXT" ]; then
-            REVIEW_TEXT="⚠️ Review konnte nicht erstellt werden (leere/fehlerhafte API-Antwort). Gate bleibt zur Sicherheit gesperrt — bitte manuell prüfen und Label setzen."
+            REVIEW_TEXT="⚠️ Review konnte nicht erstellt werden (leere/fehlerhafte API-Antwort). Gate bleibt zur Sicherheit gesperrt — bitte manuell prüfen."
             FINDINGS="yes"
           else
             LAST_MARKER=$(printf '%s\n' "$REVIEW_TEXT" | grep -iE '^FINDINGS:[[:space:]]*(yes|no)[[:space:]]*$' | tail -1)
@@ -260,15 +326,25 @@ jobs:
           DIFF_CHARS: ${{ steps.diff.outputs.char_count }}
           FINDINGS: ${{ steps.review.outputs.findings }}
           MODEL: ${{ inputs.model }}
-          ACK_LABEL: ${{ inputs.ack_label }}
+          READY_LABEL: ${{ inputs.ready_label }}
+          ATTENTION_LABEL: ${{ inputs.attention_label }}
+          AUTOFIX_RESULT: ${{ needs.autofix.result }}
         run: |
-          if [ "$FINDINGS" = "yes" ]; then
-            GATE_LINE="🔴 **Merge-Gate aktiv:** Es gibt Findings. Bitte lesen und anschließend das Label **\`$ACK_LABEL\`** setzen, um den Merge freizugeben."
+          if [ "$AUTOFIX_RESULT" = "success" ]; then
+            FIX_LINE="🛠️ *Autofix-Lauf abgeschlossen — der Review unten bewertet den korrigierten Stand.*"
           else
-            GATE_LINE="🟢 **Merge-Gate:** keine Findings — Merge freigegeben."
+            FIX_LINE=""
+          fi
+
+          if [ "$FINDINGS" = "yes" ]; then
+            GATE_LINE="🔴 **Merge-Gate aktiv:** Es sind Findings offen, die eine menschliche Entscheidung brauchen. Label **\`$ATTENTION_LABEL\`** gesetzt — bitte prüfen."
+          else
+            GATE_LINE="🟢 **Merge-Gate:** keine offenen Findings — Label **\`$READY_LABEL\`** gesetzt, Merge kann manuell erfolgen."
           fi
 
           COMMENT_BODY="## 🤖 Claude Code Review
+
+          $FIX_LINE
 
           $REVIEW_TEXT
 
@@ -286,7 +362,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ steps.sha.outputs.head }}
           RAW_TEXT: ${{ steps.review.outputs.raw_text }}
         run: |
           # Inline-Block extrahieren und in Review-API-Kommentare übersetzen.
@@ -325,20 +401,23 @@ jobs:
             --method POST --input - <<< "$PAYLOAD" || \
             echo "::warning::Inline-Kommentare konnten nicht (alle) gesetzt werden — Findings stehen im Sammelkommentar."
 
-      - name: Set review-gate commit status
+      - name: Set review-gate status and merge label
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ steps.sha.outputs.head }}
           FINDINGS: ${{ steps.review.outputs.findings }}
-          ACK_LABEL: ${{ inputs.ack_label }}
+          SKIPPED: ${{ steps.review.outputs.skipped }}
+          READY_LABEL: ${{ inputs.ready_label }}
+          ATTENTION_LABEL: ${{ inputs.attention_label }}
         run: |
           # Default failure: wenn der findings-Output fehlt (z.B. Step abgebrochen) -> sicher blocken.
           STATE="failure"
-          DESC="Findings — bitte lesen und Label '$ACK_LABEL' setzen"
+          DESC="Findings offen — '$ATTENTION_LABEL' gesetzt"
           if [ "$FINDINGS" = "no" ]; then
             STATE="success"
-            DESC="Keine Findings — Merge freigegeben"
+            DESC="Keine offenen Findings — '$READY_LABEL' gesetzt"
           fi
 
           gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
@@ -346,3 +425,17 @@ jobs:
             -f state="$STATE" \
             -f context="review-gate" \
             -f description="$DESC"
+
+          # Labels nur setzen, wenn tatsächlich reviewt wurde (kein graceful skip).
+          if [ "$SKIPPED" = "true" ]; then
+            echo "Review übersprungen — keine Merge-Labels gesetzt, Gate offen."
+            exit 0
+          fi
+
+          if [ "$STATE" = "success" ]; then
+            gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --add-label "$READY_LABEL" --remove-label "$ATTENTION_LABEL" 2>/dev/null || true
+          else
+            gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --add-label "$ATTENTION_LABEL" --remove-label "$READY_LABEL" 2>/dev/null || true
+          fi
