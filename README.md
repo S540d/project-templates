@@ -43,7 +43,7 @@ uses: S540d/project-templates/.github/workflows/reusable-pr-review.yml@v1
 
 | Workflow | Verhalten |
 |---|---|
-| `reusable-pr-review.yml` | Claude-PR-Review; graceful skip wenn `ANTHROPIC_API_KEY` fehlt |
+| `reusable-pr-review.yml` | Claude-PR-Review + autonomer Autofix; setzt `ready to merge` / `needs human review`; graceful skip wenn `ANTHROPIC_API_KEY` fehlt |
 | `reusable-security-scan.yml` | fail-closed (Funde + Scanner-Fehler brechen ab) |
 | `reusable-ci-quality.yml` | lint / type-check / test – konfigurierbar |
 | `reusable-gitignore-audit.yml` | blocking; Pflicht-Ignores + keine getrackten Secrets |
