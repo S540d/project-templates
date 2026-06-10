@@ -56,9 +56,15 @@ Jedes Repo muss in `.gitignore` enthalten:
 - `CLAUDE.md` im Root wird von Claude Code automatisch gelesen und ist für alle Entwickler sichtbar
 - `.claude/` enthält lokale Commands und Settings, die gerätespezifisch sind und nicht ins Repo gehören
 
-## Automatischer PR-Review
-Alle Repos haben `pr-review.yml` — Claude postet automatisch einen Review-Kommentar.
-Voraussetzung: `ANTHROPIC_API_KEY` als Repository-Secret.
+## Automatischer PR-Review mit autonomer Korrektur
+Alle Repos haben `pr-review.yml` (`reusable-pr-review.yml@v1`). Pro PR läuft:
+1. **Autofix:** Claude-Agent korrigiert alle umsetzbaren Findings selbst (Commit `[auto]` + Push).
+2. **Review:** bewertet den End-Stand, setzt `review-gate` und das Label
+   `ready to merge` (sauber) bzw. `needs human review` (menschliche Entscheidung nötig).
+
+Du merged manuell, sobald `ready to merge` gesetzt ist (kein Quittierungs-Label mehr).
+Voraussetzung: `ANTHROPIC_API_KEY` als Repository-Secret und
+`permissions: contents: write, pull-requests: write, statuses: write`.
 
 ## Branch Protection (Rulesets)
 `main` und `testing` sind in allen Repos per Ruleset geschützt:

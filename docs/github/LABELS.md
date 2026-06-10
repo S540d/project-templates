@@ -7,7 +7,7 @@ Einfaches, einheitliches Label-System für alle Projekte.
 
 ## Übersicht
 
-Insgesamt **9 Labels** in 3 Kategorien:
+Insgesamt **11 Labels** in 4 Kategorien (inkl. 2 automatisch gesetzte PR-Review-Gate-Labels):
 
 ### Type Labels (Was ist das Issue?)
 
@@ -31,6 +31,16 @@ Insgesamt **9 Labels** in 3 Kategorien:
 |-------|-------|-------------|
 | `blocked` | ⚫ #3d3d3d | Blockiert - wartet auf etwas |
 | `ready-for-implementation` | ✅ #34b13e | Ready - kann angefangen werden |
+
+### PR-Review-Gate Labels (automatisch gesetzt)
+
+Diese Labels werden vom Claude-PR-Review-Workflow (`reusable-pr-review.yml`)
+**automatisch** an Pull Requests vergeben — nicht manuell setzen.
+
+| Label | Farbe | Beschreibung |
+|-------|-------|-------------|
+| `ready to merge` | 🟢 #0e8a16 | Review sauber/aufgelöst — Merge kann manuell erfolgen |
+| `needs human review` | 🔴 #d93f0b | Findings brauchen menschliche Entscheidung — bitte prüfen |
 
 ---
 

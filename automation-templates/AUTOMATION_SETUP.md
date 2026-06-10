@@ -266,38 +266,39 @@ git push origin v1.0.9
 
 ---
 
-## 🤖 Claude PR-Review als Merge-Gate (Hybrid)
+## 🤖 Claude PR-Review mit autonomer Korrektur
 
-Jeder PR wird automatisch von Claude (Anthropic API) reviewt. Der Review ist ein
-**Pflicht-Gate vor dem Merge** über den required Status-Check **`review-gate`**.
+Jeder PR durchläuft automatisch zwei Schritte (ein Workflow-Run, `reusable-pr-review.yml`):
+
+1. **Autofix** — Ein Claude-Agent (`anthropics/claude-code-action`) reviewt den PR,
+   **korrigiert alle umsetzbaren Findings selbst**, committet (`[auto]`) und pusht auf
+   den PR-Branch. Er iteriert intern, bis nichts Umsetzbares mehr offen ist.
+2. **Review** — Ein deterministischer Review des **korrigierten End-Stands** postet den
+   Review-Kommentar, setzt den required Status-Check **`review-gate`** und vergibt das
+   Status-Label.
 
 ### Funktionsweise
 
-| Situation | `review-gate` | Merge | Aktion |
+| Situation | `review-gate` | Label | Merge |
 |---|---|---|---|
-| Claude findet nichts | 🟢 grün | frei | keine — geht ohne Klick durch |
-| Claude findet etwas | 🔴 rot | gesperrt | Findings lesen (Inline-Kommentare) |
-| Findings quittiert | 🟢 grün | frei | Label setzen (s.u.) |
+| Alles auto-korrigiert / nichts zu tun | 🟢 grün | `ready to merge` | manuell durch dich |
+| Findings brauchen menschliche Entscheidung | 🔴 rot | `needs human review` | erst nach Klärung |
+| API-Ausfall / kein Findings-Marker | 🔴 rot | — | gesperrt (fail-closed) |
 
-- **Quittierung:** Label **`suggestions gelesen und verstanden`** am PR setzen → der Check
-  springt sofort auf grün (kein neuer Commit nötig).
-- **Re-Review:** Bei jedem neuen Push wird das Label automatisch entfernt → erneut quittieren.
-- **Sicherheit:** Bei API-Ausfall / fehlendem Findings-Marker bleibt der Check **rot**
-  (lieber blocken als ungeprüft durchwinken).
+- **Du merged manuell**, sobald `ready to merge` gesetzt ist. Es gibt **kein** manuelles
+  Quittierungs-Label mehr — der Agent erledigt die Korrektur selbst.
+- **Re-Review:** Jeder neue (menschliche) Push startet einen frischen Lauf. Der Autofix-Push
+  selbst nutzt `GITHUB_TOKEN` und löst **keinen** neuen Lauf aus (Schleifenschutz).
+- **Forks:** Kein Autofix (Secrets/Schreibrechte fehlen); der Review läuft read-only.
+- **Sicherheit:** Bei API-Ausfall / fehlendem Findings-Marker bleibt der Check **rot**.
 
 ### Einrichtung pro Repo
 
 1. Secret `ANTHROPIC_API_KEY` (Repo oder Org).
 2. Workflow `.github/workflows/pr-review.yml` (ruft `reusable-pr-review.yml@v1`,
-   braucht `permissions: pull-requests: write, contents: read, statuses: write`).
-3. Workflow `.github/workflows/review-gate-resolve.yml` (ruft
-   `reusable-review-gate-resolve.yml@v1`, Trigger `pull_request: [labeled, unlabeled]`).
-4. Label `suggestions gelesen und verstanden` anlegen:
-   ```bash
-   gh label create "suggestions gelesen und verstanden" --repo S540d/<REPO> \
-     --color FBCA04 --description "Claude-PR-Review gelesen + verstanden — Voraussetzung für Merge"
-   ```
-5. `review-gate` als required status check ins `protect-main`-Ruleset (siehe
+   braucht `permissions: pull-requests: write, contents: write, statuses: write`).
+3. Labels `ready to merge` + `needs human review` anlegen (via `scripts/setup-labels.sh`).
+4. `review-gate` als required status check ins `protect-main`-Ruleset (siehe
    `github-ruleset-protect-main-*.json`).
 
 > ⚠️ Den Ruleset-Check `review-gate` **erst** aktivieren, wenn die Workflows im Repo liegen
