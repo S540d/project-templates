@@ -1,5 +1,6 @@
 name: Reusable PR Review (Claude)
 
+# (Test-Trigger: trivialer Kommentar – prüft, ob der Workflow mit PR-HEAD-Version startet)
 # Vollautomatischer Review-Prozess. Aufruf versioniert (@v1):
 #
 #   jobs:
