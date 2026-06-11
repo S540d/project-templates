@@ -1,6 +1,6 @@
 name: Reusable PR Review (Claude)
 
-# Vollautomatischer Review-Prozess. Aufruf versioniert (@v1):
+# Deterministischer PR-Review via Anthropic API. Aufruf versioniert (@v1):
 #
 #   jobs:
 #     pr-review:
@@ -10,30 +10,23 @@ name: Reusable PR Review (Claude)
 #       with:
 #         language: 'de'
 #
-# Ablauf (zwei Jobs in EINEM Run):
-#   1) autofix  – Claude-Agent (anthropics/claude-code-action) reviewt den PR und
-#                 korrigiert ALLE umsetzbaren Findings selbst (Commit "[auto]" + Push
-#                 auf den PR-Branch). Iteriert intern via --max-turns.
-#   2) review   – deterministischer Claude-Review des END-Stands: postet den Review-
-#                 Kommentar (+ Inline-Findings), setzt den Commit-Status "review-gate"
-#                 auf den finalen HEAD und vergibt das Status-Label:
-#                   - keine Findings  -> "ready to merge"     (Mensch merged manuell)
-#                   - Findings übrig  -> "needs human review" (menschliche Entscheidung)
+# Ablauf (ein Job):
+#   review – Claude reviewt den PR-Diff, postet einen Review-Kommentar
+#            (+ Inline-Findings), setzt den Commit-Status "review-gate"
+#            und vergibt das Status-Label:
+#              - keine Findings  -> "ready to merge"     (Mensch merged manuell)
+#              - Findings übrig  -> "needs human review" (menschliche Entscheidung)
 #
 # Voraussetzungen:
 #   - Secret ANTHROPIC_API_KEY (Repo oder Org)
 #   - Trigger im Caller: pull_request (opened, synchronize, reopened)
 #   - permissions im Caller:
-#       contents: write        # Autofix-Commits pushen
+#       contents: read          # PR-Branch auschecken
 #       pull-requests: write    # Review-Kommentare + Labels
 #       statuses: write         # Commit-Status "review-gate"
 #
-# Schleifenschutz / Sicherheit:
-#   - Der Autofix-Push nutzt GITHUB_TOKEN -> löst KEINEN neuen pull_request-Run aus.
-#     Pro PR-Event genau ein Durchlauf; der Agent iteriert innerhalb des Runs.
-#   - Forks: kein Autofix (Secrets/Schreibrechte stehen Forks nicht zur Verfügung).
-#   - review läuft immer (always()) – auch wenn autofix übersprungen wurde oder
-#     fehlschlug. Bei API-Ausfall / fehlendem Findings-Marker bleibt das Gate ROT.
+# Repos ohne ANTHROPIC_API_KEY: Review wird übersprungen, Gate bleibt offen
+# (mergebar). So bleiben Repos ohne Key nicht dauerhaft blockiert.
 
 on:
   workflow_call:
@@ -44,7 +37,7 @@ on:
         type: string
         default: 'de'
       model:
-        description: 'Claude-Modell für Review und Autofix'
+        description: 'Claude-Modell für den Review'
         required: false
         type: string
         default: 'claude-sonnet-4-6'
@@ -53,16 +46,6 @@ on:
         required: false
         type: number
         default: 40000
-      autofix:
-        description: 'Autonome PR-Korrektur durch Claude aktivieren'
-        required: false
-        type: boolean
-        default: true
-      max_turns:
-        description: 'Maximale Agenten-Iterationen im Autofix-Schritt'
-        required: false
-        type: number
-        default: 15
       ready_label:
         description: 'Label, das gesetzt wird, wenn der Review sauber ist'
         required: false
@@ -79,66 +62,19 @@ on:
         required: false
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   statuses: write
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 1) Autonome Korrektur: Agent reviewt + fixt + pusht.
-  # ---------------------------------------------------------------------------
-  autofix:
-    runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'pull_request' &&
-      inputs.autofix &&
-      github.event.pull_request.head.repo.fork == false
-    env:
-      # secrets-Kontext ist in einem step-level if: nicht erlaubt -> auf Job-Ebene
-      # in env heben (dort zulässig) und im step auf den abgeleiteten Wert prüfen.
-      HAS_API_KEY: ${{ secrets.anthropic_api_key != '' }}
-    steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Claude autofix
-        # Ohne API-Key kein Autofix – der review-Job blockiert das Gate dann nicht
-        # (graceful skip), damit Repos ohne Key mergebar bleiben.
-        if: ${{ env.HAS_API_KEY == 'true' }}
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.anthropic_api_key }}
-          prompt: |
-            Du bist ein erfahrener Code-Reviewer mit Schreibzugriff auf diesen Pull Request.
-            Prüfe die Änderungen dieses PRs auf:
-              1) Korrektheitsfehler, 2) Sicherheitsprobleme,
-              3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit.
-            Korrigiere JEDES umsetzbare Finding direkt im Code. Arbeite iterativ:
-            analysieren -> fixen -> (falls vorhanden) Tests/Linter prüfen -> wiederholen,
-            bis keine umsetzbaren Findings mehr übrig sind.
-            Committe deine Änderungen in klaren, kleinen Commits mit dem Marker "[auto]"
-            im Commit-Titel und pushe sie auf den aktuellen PR-Branch.
-            Findings, die eine menschliche Architektur- oder Produktentscheidung erfordern
-            oder mehrdeutig sind, NICHT erzwingen — kurz benennen und dem Menschen überlassen.
-            Nimm keine unnötigen kosmetischen Änderungen vor.
-          claude_args: |
-            --model ${{ inputs.model }}
-            --max-turns ${{ inputs.max_turns }}
-            --allowedTools "Bash(git:*),Bash(npm:*),Bash(npx:*),Edit,Write,Read,Grep,Glob"
-
-  # ---------------------------------------------------------------------------
-  # 2) Deterministischer Review des END-Stands + Gate + Label.
+  # Deterministischer Review des PR-Stands + Gate + Label.
   # ---------------------------------------------------------------------------
   review:
-    needs: autofix
-    # always(): läuft auch, wenn autofix übersprungen (Fork/disabled) wurde oder fehlschlug.
-    if: ${{ always() && github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR branch (post-autofix)
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
@@ -214,7 +150,7 @@ jobs:
              Schreibe nichts nach dieser Zeile."
 
           if [ "$LANGUAGE" = "en" ]; then
-            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important. Note: actionable findings may already have been auto-fixed before this review; only report what is still open.
+            SYSTEM_PROMPT="You are an expert code reviewer. Review the following pull request and provide constructive, actionable feedback. Be concise and focus on: 1) Correctness bugs, 2) Security issues, 3) Performance problems, 4) Code quality and maintainability. If the code looks good, say so briefly. Do not suggest cosmetic changes or nitpicks unless they are important.
 
           $FORMAT_EN"
             USER_PROMPT="Please review this pull request:
@@ -229,7 +165,7 @@ jobs:
           $PR_DIFF
           \`\`\`"
           else
-            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig. Hinweis: umsetzbare Findings wurden ggf. vor diesem Review bereits automatisch korrigiert; melde nur, was noch offen ist.
+            SYSTEM_PROMPT="Du bist ein erfahrener Code-Reviewer. Überprüfe den folgenden Pull Request und gib konstruktives, umsetzbares Feedback. Sei prägnant und fokussiere auf: 1) Korrektheitsfehler, 2) Sicherheitsprobleme, 3) Performance-Probleme, 4) Code-Qualität und Wartbarkeit. Falls der Code gut aussieht, sage das kurz. Schlage keine kosmetischen Änderungen oder Kleinigkeiten vor, außer sie sind wichtig.
 
           $FORMAT_DE"
             USER_PROMPT="Bitte reviewe diesen Pull Request:
@@ -332,14 +268,7 @@ jobs:
           MODEL: ${{ inputs.model }}
           READY_LABEL: ${{ inputs.ready_label }}
           ATTENTION_LABEL: ${{ inputs.attention_label }}
-          AUTOFIX_RESULT: ${{ needs.autofix.result }}
         run: |
-          if [ "$AUTOFIX_RESULT" = "success" ]; then
-            FIX_LINE="🛠️ *Autofix-Lauf abgeschlossen — der Review unten bewertet den korrigierten Stand.*"
-          else
-            FIX_LINE=""
-          fi
-
           if [ "$FINDINGS" = "yes" ]; then
             GATE_LINE="🔴 **Merge-Gate aktiv:** Es sind Findings offen, die eine menschliche Entscheidung brauchen. Label **\`$ATTENTION_LABEL\`** gesetzt — bitte prüfen."
           else
@@ -347,8 +276,6 @@ jobs:
           fi
 
           COMMENT_BODY="## 🤖 Claude Code Review
-
-          $FIX_LINE
 
           $REVIEW_TEXT
 
