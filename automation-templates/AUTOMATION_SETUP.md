@@ -296,7 +296,7 @@ Jeder PR durchläuft automatisch zwei Schritte (ein Workflow-Run, `reusable-pr-r
 
 1. Secret `ANTHROPIC_API_KEY` (Repo oder Org).
 2. Workflow `.github/workflows/pr-review.yml` (ruft `reusable-pr-review.yml@v1`,
-   braucht `permissions: pull-requests: write, contents: write, statuses: write`).
+   braucht `permissions: pull-requests: write, contents: read, statuses: write`).
 3. Labels `ready to merge` + `needs human review` anlegen (via `scripts/setup-labels.sh`).
 4. `review-gate` als required status check ins `protect-main`-Ruleset (siehe
    `github-ruleset-protect-main-*.json`).
