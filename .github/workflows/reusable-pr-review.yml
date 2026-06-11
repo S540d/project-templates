@@ -93,6 +93,10 @@ jobs:
       github.event_name == 'pull_request' &&
       inputs.autofix &&
       github.event.pull_request.head.repo.fork == false
+    env:
+      # secrets-Kontext ist in einem step-level if: nicht erlaubt -> auf Job-Ebene
+      # in env heben (dort zulässig) und im step auf den abgeleiteten Wert prüfen.
+      HAS_API_KEY: ${{ secrets.anthropic_api_key != '' }}
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -103,7 +107,7 @@ jobs:
       - name: Claude autofix
         # Ohne API-Key kein Autofix – der review-Job blockiert das Gate dann nicht
         # (graceful skip), damit Repos ohne Key mergebar bleiben.
-        if: ${{ secrets.anthropic_api_key != '' }}
+        if: ${{ env.HAS_API_KEY == 'true' }}
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
