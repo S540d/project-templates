@@ -27,7 +27,6 @@ name: Reusable PR Review (Claude)
 #       contents: write        # Autofix-Commits pushen
 #       pull-requests: write    # Review-Kommentare + Labels
 #       statuses: write         # Commit-Status "review-gate"
-#       id-token: write         # OIDC-Token für claude-code-action (autofix)
 #
 # Schleifenschutz / Sicherheit:
 #   - Der Autofix-Push nutzt GITHUB_TOKEN -> löst KEINEN neuen pull_request-Run aus.
@@ -83,7 +82,6 @@ permissions:
   contents: write
   pull-requests: write
   statuses: write
-  id-token: write   # anthropics/claude-code-action@v1 holt einen OIDC-Token (autofix)
 
 jobs:
   # ---------------------------------------------------------------------------
