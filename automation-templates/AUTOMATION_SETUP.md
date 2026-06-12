@@ -266,31 +266,24 @@ git push origin v1.0.9
 
 ---
 
-## 🤖 Claude PR-Review mit autonomer Korrektur
+## 🤖 Claude PR-Review
 
-Jeder PR durchläuft automatisch zwei Schritte (ein Workflow-Run, `reusable-pr-review.yml`):
+Jeder PR durchläuft automatisch einen deterministischen Review (`reusable-pr-review.yml@v1`):
 
-1. **Autofix** — Ein Claude-Agent (`anthropics/claude-code-action`) reviewt den PR,
-   **korrigiert alle umsetzbaren Findings selbst**, committet (`[auto]`) und pusht auf
-   den PR-Branch. Er iteriert intern, bis nichts Umsetzbares mehr offen ist.
-2. **Review** — Ein deterministischer Review des **korrigierten End-Stands** postet den
-   Review-Kommentar, setzt den required Status-Check **`review-gate`** und vergibt das
-   Status-Label.
+- Claude reviewt den PR-Diff und postet einen Kommentar (+ Inline-Findings)
+- Setzt den required Status-Check **`review-gate`** und vergibt das Status-Label
 
 ### Funktionsweise
 
 | Situation | `review-gate` | Label | Merge |
 |---|---|---|---|
-| Alles auto-korrigiert / nichts zu tun | 🟢 grün | `ready to merge` | manuell durch dich |
-| Findings brauchen menschliche Entscheidung | 🔴 rot | `needs human review` | erst nach Klärung |
+| Keine Findings | 🟢 grün | `ready to merge` | manuell durch dich |
+| Findings vorhanden | 🔴 rot | `needs human review` | erst nach Klärung |
 | API-Ausfall / kein Findings-Marker | 🔴 rot | — | gesperrt (fail-closed) |
+| Kein `ANTHROPIC_API_KEY` gesetzt | 🟢 grün (übersprungen) | — | frei |
 
-- **Du merged manuell**, sobald `ready to merge` gesetzt ist. Es gibt **kein** manuelles
-  Quittierungs-Label mehr — der Agent erledigt die Korrektur selbst.
-- **Re-Review:** Jeder neue (menschliche) Push startet einen frischen Lauf. Der Autofix-Push
-  selbst nutzt `GITHUB_TOKEN` und löst **keinen** neuen Lauf aus (Schleifenschutz).
-- **Forks:** Kein Autofix (Secrets/Schreibrechte fehlen); der Review läuft read-only.
-- **Sicherheit:** Bei API-Ausfall / fehlendem Findings-Marker bleibt der Check **rot**.
+- **Den roten Gate öffnet nur ein sauberer Re-Run** — Findings fixen, pushen, neuer Lauf.
+- **Sicherheit:** Bei API-Ausfall / fehlendem Findings-Marker bleibt der Check **rot** (fail-closed).
 
 ### Einrichtung pro Repo
 
