@@ -71,7 +71,11 @@ jobs:
 
           # 2) CI-Checks-Übersicht (check-runs am HEAD; review-gate ist ein Status,
           #    kein check-run, taucht hier also nicht auf).
-          CHECKS_JSON=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs" 2>/dev/null || echo '{"check_runs":[]}')
+          # Eigenen Job ("mergeability") herausfiltern – er läuft beim Posten noch
+          # und würde sonst dauerhaft als ⏳ erscheinen.
+          CHECKS_JSON=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs" 2>/dev/null \
+            | jq '{check_runs: [.check_runs[] | select(.name != "mergeability")]}' \
+            2>/dev/null || echo '{"check_runs":[]}')
           CHECK_LINES=$(printf '%s' "$CHECKS_JSON" | jq -r '
             .check_runs
             | if length == 0 then "_keine CI-Checks gefunden_"
