@@ -1,0 +1,162 @@
+name: Reusable Mergeability Report
+
+# Kostenloser, deterministischer Mergeability-Report + Merge-Gate – OHNE API-Kosten.
+# Aufruf versioniert (@v2):
+#
+#   jobs:
+#     mergeability:
+#       uses: S540d/project-templates/.github/workflows/reusable-mergeability.yml@v2
+#
+# Pro PR:
+#   - postet/aktualisiert einen Sticky-Kommentar (Zielbranch, Konflikt-Status,
+#     CI-Übersicht, Checkliste)
+#   - setzt den Commit-Status "review-gate":
+#       kein Merge-Konflikt      -> success
+#       Merge-Konflikt           -> failure
+#       (optional) falscher Base -> failure, nur wenn block_on_protected_base=true
+#
+# Reine GitHub-API via `gh` — verbraucht KEINE Anthropic-API-Token. Übernimmt die
+# Gate-Rolle, die früher in reusable-pr-review.yml lag. Der Status-Context heißt
+# weiterhin "review-gate", damit bestehende Branch-Protection-Rulesets greifen.
+#
+# Voraussetzungen im Caller:
+#   - Trigger: pull_request (opened, synchronize, reopened)
+#   - permissions: contents: read, pull-requests: write, statuses: write
+
+on:
+  workflow_call:
+    inputs:
+      protected_branch:
+        description: 'Branch, gegen den direkte Feature-PRs als Policy-Verstoß markiert werden'
+        required: false
+        type: string
+        default: 'main'
+      block_on_protected_base:
+        description: 'Wenn true, blockiert das Gate auch direkte PRs gegen protected_branch'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  mergeability:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report mergeability and set review-gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PROTECTED_BRANCH: ${{ inputs.protected_branch }}
+          BLOCK_ON_BASE: ${{ inputs.block_on_protected_base }}
+        run: |
+          set -euo pipefail
+          REPO="$GITHUB_REPOSITORY"
+
+          # 1) Mergeable-Status holen. GitHub berechnet das asynchron -> kurz pollen.
+          MERGEABLE="null"; MERGE_STATE="unknown"
+          for _ in 1 2 3 4 5; do
+            PR_JSON=$(gh api "repos/$REPO/pulls/$PR_NUMBER")
+            MERGEABLE=$(printf '%s' "$PR_JSON" | jq -r '.mergeable')
+            MERGE_STATE=$(printf '%s' "$PR_JSON" | jq -r '.mergeable_state')
+            [ "$MERGEABLE" != "null" ] && break
+            sleep 3
+          done
+
+          # 2) CI-Checks-Übersicht (check-runs am HEAD; review-gate ist ein Status,
+          #    kein check-run, taucht hier also nicht auf).
+          # Eigenen Job ("mergeability") herausfiltern – er läuft beim Posten noch
+          # und würde sonst dauerhaft als ⏳ erscheinen.
+          CHECKS_JSON=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs" 2>/dev/null \
+            | jq '{check_runs: [.check_runs[] | select(.name != "mergeability")]}' \
+            2>/dev/null || echo '{"check_runs":[]}')
+          CHECK_LINES=$(printf '%s' "$CHECKS_JSON" | jq -r '
+            .check_runs
+            | if length == 0 then "_keine CI-Checks gefunden_"
+              else map(
+                (if .status != "completed" then "⏳ "
+                 elif .conclusion == "success" then "✅ "
+                 elif .conclusion == "skipped" then "⏭️ "
+                 else "❌ " end) + .name
+              ) | join("\n")
+              end')
+          CI_FAILED=$(printf '%s' "$CHECKS_JSON" | jq -r '
+            [.check_runs[] | select(.status=="completed" and (.conclusion|IN("failure","timed_out","cancelled","action_required")))] | length')
+
+          # 3) Konflikt- und Zielbranch-Auswertung.
+          if [ "$MERGEABLE" = "false" ]; then
+            CONFLICT_LINE="❌ **Merge-Konflikt** – aktuell nicht konfliktfrei mergebar (\`$MERGE_STATE\`)."
+            HAS_CONFLICT=1
+          elif [ "$MERGEABLE" = "true" ]; then
+            CONFLICT_LINE="✅ Konfliktfrei mergebar (\`$MERGE_STATE\`)."
+            HAS_CONFLICT=0
+          else
+            CONFLICT_LINE="⏳ Mergeability wird von GitHub noch berechnet – wird beim nächsten Push erneut geprüft."
+            HAS_CONFLICT=0
+          fi
+
+          BASE_VIOLATION=0
+          if [ "$BASE_REF" = "$PROTECTED_BRANCH" ]; then
+            BASE_LINE="⚠️ Ziel-Branch \`$BASE_REF\` – laut Policy gehen Feature-PRs gegen \`testing\`, nicht direkt gegen \`$PROTECTED_BRANCH\`."
+            BASE_VIOLATION=1
+          else
+            BASE_LINE="✅ Ziel-Branch \`$BASE_REF\` ist policy-konform."
+          fi
+
+          # 4) Gate: Konflikt blockt immer; falscher Base nur wenn aktiviert.
+          GATE="success"; GATE_DESC="Konfliktfrei – Merge möglich"
+          if [ "$HAS_CONFLICT" = "1" ]; then
+            GATE="failure"; GATE_DESC="Merge-Konflikt – bitte Branch aktualisieren"
+          elif [ "$BLOCK_ON_BASE" = "true" ] && [ "$BASE_VIOLATION" = "1" ]; then
+            GATE="failure"; GATE_DESC="Ziel-Branch '$BASE_REF' nicht policy-konform"
+          fi
+
+          gh api "repos/$REPO/statuses/$HEAD_SHA" \
+            --method POST \
+            -f state="$GATE" \
+            -f context="review-gate" \
+            -f description="$GATE_DESC"
+
+          # 5) Sticky-Kommentar bauen.
+          if [ "$CI_FAILED" -gt 0 ]; then
+            CI_SUMMARY="❌ $CI_FAILED fehlgeschlagene(r) Check(s)"
+          else
+            CI_SUMMARY="✅ keine fehlgeschlagenen Checks"
+          fi
+          MARKER="<!-- mergeability-report -->"
+          BODY="$MARKER
+          ## 🔀 Mergeability-Report
+
+          $CONFLICT_LINE
+          $BASE_LINE
+
+          **CI-Checks:** $CI_SUMMARY
+
+          $CHECK_LINES
+
+          ### Merge-Checkliste
+          - CI-Checks grün
+          - Keine Merge-Konflikte
+          - Ziel-Branch korrekt
+          - (Optional) tiefes KI-Review via \`/review\` aus Claude Code (Pro-Abo, ohne API-Kosten)
+
+          ---
+          *Kostenlos generiert von [reusable-mergeability.yml](https://github.com/S540d/project-templates/blob/main/.github/workflows/reusable-mergeability.yml) · keine API-Kosten · review-gate: \`$GATE\`*"
+
+          # 6) Bestehenden Report-Kommentar finden -> aktualisieren, sonst neu anlegen.
+          EXISTING_ID=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            | jq -r --arg m "$MARKER" 'map(select(.body | startswith($m))) | (.[0].id // empty)')
+
+          if [ -n "$EXISTING_ID" ]; then
+            gh api "repos/$REPO/issues/comments/$EXISTING_ID" --method PATCH -f body="$BODY" >/dev/null
+            echo "Sticky-Kommentar $EXISTING_ID aktualisiert (review-gate=$GATE)."
+          else
+            gh api "repos/$REPO/issues/$PR_NUMBER/comments" --method POST -f body="$BODY" >/dev/null
+            echo "Sticky-Kommentar neu angelegt (review-gate=$GATE)."
+          fi

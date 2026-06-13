@@ -56,15 +56,21 @@ Jedes Repo muss in `.gitignore` enthalten:
 - `CLAUDE.md` im Root wird von Claude Code automatisch gelesen und ist für alle Entwickler sichtbar
 - `.claude/` enthält lokale Commands und Settings, die gerätespezifisch sind und nicht ins Repo gehören
 
-## Automatischer PR-Review mit autonomer Korrektur
-Alle Repos haben `pr-review.yml` (`reusable-pr-review.yml@v1`). Pro PR läuft:
-1. **Autofix:** Claude-Agent korrigiert alle umsetzbaren Findings selbst (Commit `[auto]` + Push).
-2. **Review:** bewertet den End-Stand, setzt `review-gate` und das Label
-   `ready to merge` (sauber) bzw. `needs human review` (menschliche Entscheidung nötig).
+## PR-Review & Merge-Gate (kostenlos + abo-basiert)
+Die früher metered, pro PR laufende Anthropic-API ist abgelöst. Neues Modell:
 
-Du merged manuell, sobald `ready to merge` gesetzt ist (kein Quittierungs-Label mehr).
-Voraussetzung: `ANTHROPIC_API_KEY` als Repository-Secret und
-`permissions: contents: write, pull-requests: write, statuses: write`.
+1. **Kostenloses Gate (automatisch):** `mergeability.yml`
+   (`reusable-mergeability.yml@v2`) läuft bei jedem PR, postet einen
+   Sticky-Mergeability-Kommentar und setzt `review-gate`
+   (grün ohne Konflikt, rot bei Konflikt). Reine GitHub-API, keine API-Kosten.
+   CI-Quality + Security-Scan bleiben eigene required Checks.
+2. **Tiefer KI-Review (primär, abo-basiert):** `/review` aus Claude Code (Pro/Max)
+   — lokal am PC oder per Web-Session vom Telefon, ohne Pay-per-Token.
+3. **Optionaler API-Fallback:** Label `ai-review` triggert `pr-review.yml`
+   (`reusable-pr-review.yml@v2`, Haiku) — rein beratend, ⚠️ metered.
+
+Du merged manuell, sobald CI grün und `review-gate` grün sind.
+`ANTHROPIC_API_KEY` ist nur noch für den optionalen Fallback nötig (kein Pflicht-Secret).
 
 ## Branch Protection (Rulesets)
 `main` und `testing` sind in allen Repos per Ruleset geschützt:

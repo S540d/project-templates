@@ -266,44 +266,46 @@ git push origin v1.0.9
 
 ---
 
-## 🤖 Claude PR-Review mit autonomer Korrektur
+## 🔀 PR-Review & Merge-Gate (kostenlos + abo-basiert)
 
-Jeder PR durchläuft automatisch zwei Schritte (ein Workflow-Run, `reusable-pr-review.yml`):
+Statt bei jedem PR die (metered) Anthropic-API zu rufen, gilt ein Drei-Schichten-Modell:
 
-1. **Autofix** — Ein Claude-Agent (`anthropics/claude-code-action`) reviewt den PR,
-   **korrigiert alle umsetzbaren Findings selbst**, committet (`[auto]`) und pusht auf
-   den PR-Branch. Er iteriert intern, bis nichts Umsetzbares mehr offen ist.
-2. **Review** — Ein deterministischer Review des **korrigierten End-Stands** postet den
-   Review-Kommentar, setzt den required Status-Check **`review-gate`** und vergibt das
-   Status-Label.
+### 1. Kostenloses Gate — `mergeability.yml` (automatisch, keine API-Kosten)
 
-### Funktionsweise
+Läuft bei jedem PR (`reusable-mergeability.yml@v2`), postet einen **Sticky-Kommentar**
+(Zielbranch, Konflikt-Status, CI-Übersicht, Checkliste) und setzt den required
+Status-Check **`review-gate`** via reiner GitHub-API:
 
-| Situation | `review-gate` | Label | Merge |
-|---|---|---|---|
-| Alles auto-korrigiert / nichts zu tun | 🟢 grün | `ready to merge` | manuell durch dich |
-| Findings brauchen menschliche Entscheidung | 🔴 rot | `needs human review` | erst nach Klärung |
-| API-Ausfall / kein Findings-Marker | 🔴 rot | — | gesperrt (fail-closed) |
+| Situation | `review-gate` | Merge |
+|---|---|---|
+| Konfliktfrei | 🟢 grün | möglich (sofern CI grün) |
+| Merge-Konflikt | 🔴 rot | erst Branch aktualisieren |
+| (optional) PR direkt gegen `main` | 🔴 rot* | nur bei `block_on_protected_base: true` |
 
-- **Du merged manuell**, sobald `ready to merge` gesetzt ist. Es gibt **kein** manuelles
-  Quittierungs-Label mehr — der Agent erledigt die Korrektur selbst.
-- **Re-Review:** Jeder neue (menschliche) Push startet einen frischen Lauf. Der Autofix-Push
-  selbst nutzt `GITHUB_TOKEN` und löst **keinen** neuen Lauf aus (Schleifenschutz).
-- **Forks:** Kein Autofix (Secrets/Schreibrechte fehlen); der Review läuft read-only.
-- **Sicherheit:** Bei API-Ausfall / fehlendem Findings-Marker bleibt der Check **rot**.
+### 2. Tiefer KI-Review — `/review` aus Claude Code (primär, ohne Pay-per-Token)
+
+Führe `/review` bzw. `/code-review --comment` aus Claude Code aus — **lokal am PC
+oder in einer Web-Session vom Telefon**. Gedeckt durch dein Pro/Max-Abo, **keine
+metered API-Kosten**. `--comment` postet Findings an den PR, `--fix` setzt sie um.
+
+### 3. Optionaler API-Fallback — Label `ai-review` (⚠️ metered)
+
+Setzt du das Label **`ai-review`** an einen PR, läuft `pr-review.yml`
+(`reusable-pr-review.yml@v2`, Haiku) und postet einen **beratenden** Review. Er
+blockiert den Merge **nicht**. Verbraucht Anthropic-API-Token — nur bewusst nutzen.
 
 ### Einrichtung pro Repo
 
-1. Secret `ANTHROPIC_API_KEY` (Repo oder Org).
-2. Workflow `.github/workflows/pr-review.yml` (ruft `reusable-pr-review.yml@v1`,
-   braucht `permissions: pull-requests: write, contents: read, statuses: write`).
-3. Labels `ready to merge` + `needs human review` anlegen (via `scripts/setup-labels.sh`).
-4. `review-gate` als required status check ins `protect-main`-Ruleset (siehe
-   `github-ruleset-protect-main-*.json`).
+1. Workflow `.github/workflows/mergeability.yml` (kostenloses Gate, keine Secrets).
+2. Labels via `scripts/setup-labels.sh` (`ready to merge`, `needs human review`, `ai-review`).
+3. `review-gate` als required status check im `protect-main`-Ruleset (der Context-Name
+   bleibt `review-gate` — bestehende Rulesets greifen unverändert).
+4. **Optional** für den API-Fallback: Secret `ANTHROPIC_API_KEY` + Workflow
+   `.github/workflows/pr-review.yml`. Ohne Key entfällt nur der Fallback; Gate &
+   `/review` funktionieren weiter.
 
-> ⚠️ Den Ruleset-Check `review-gate` **erst** aktivieren, wenn die Workflows im Repo liegen
-> und der Check einmal gelaufen ist — sonst wartet GitHub auf einen nie laufenden Check und
-> blockiert jeden PR.
+> ⚠️ Den Ruleset-Check `review-gate` **erst** aktivieren, wenn `mergeability.yml` im Repo
+> liegt und einmal gelaufen ist — sonst wartet GitHub auf einen nie laufenden Check.
 
 ---
 

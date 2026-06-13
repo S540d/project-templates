@@ -87,6 +87,10 @@ else
 fi
 echo -e "${GREEN}  ✅ .github/workflows/ci-cd.yml${NC}"
 
+# Kostenloses Merge-Gate + Mergeability-Report (keine API-Kosten)
+cp "$TEMPLATE_DIR/automation-templates/mergeability.yml" .github/workflows/mergeability.yml
+echo -e "${GREEN}  ✅ .github/workflows/mergeability.yml${NC}"
+
 # PR Template
 cp "$TEMPLATE_DIR/automation-templates/PULL_REQUEST_TEMPLATE.md" .github/
 echo -e "${GREEN}  ✅ .github/PULL_REQUEST_TEMPLATE.md${NC}"
