@@ -7,7 +7,7 @@ Einfaches, einheitliches Label-System für alle Projekte.
 
 ## Übersicht
 
-Insgesamt **11 Labels** in 4 Kategorien (inkl. 2 automatisch gesetzte PR-Review-Gate-Labels):
+Insgesamt **12 Labels** in 4 Kategorien (inkl. PR-Review-/Gate-Labels):
 
 ### Type Labels (Was ist das Issue?)
 
@@ -32,15 +32,17 @@ Insgesamt **11 Labels** in 4 Kategorien (inkl. 2 automatisch gesetzte PR-Review-
 | `blocked` | ⚫ #3d3d3d | Blockiert - wartet auf etwas |
 | `ready-for-implementation` | ✅ #34b13e | Ready - kann angefangen werden |
 
-### PR-Review-Gate Labels (automatisch gesetzt)
+### PR-Review-/Gate Labels
 
-Diese Labels werden vom Claude-PR-Review-Workflow (`reusable-pr-review.yml`)
-**automatisch** an Pull Requests vergeben — nicht manuell setzen.
+`ready to merge` / `needs human review` markieren den Review-Stand (manuell oder
+durch Tooling). `ai-review` ist ein **Trigger**: an einen PR vergeben, stößt es den
+optionalen, metered KI-Review (`pr-review.yml`) an.
 
 | Label | Farbe | Beschreibung |
 |-------|-------|-------------|
 | `ready to merge` | 🟢 #0e8a16 | Review sauber/aufgelöst — Merge kann manuell erfolgen |
 | `needs human review` | 🔴 #d93f0b | Findings brauchen menschliche Entscheidung — bitte prüfen |
+| `ai-review` | 🟣 #5319e7 | Optionalen KI-Review (Anthropic API) anstoßen — ⚠️ kostet metered API |
 
 ---
 

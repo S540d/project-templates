@@ -35,20 +35,24 @@ Zentrale Vorlagen und Standards für alle Projekte von [DevSven](https://github.
 
 ## Reusable Workflows
 
-Immer mit festem Tag aufrufen (`@v1`, nie `@main`):
+Immer mit festem Tag aufrufen (`@v2`, nie `@main`):
 
 ```yaml
-uses: S540d/project-templates/.github/workflows/reusable-pr-review.yml@v1
+uses: S540d/project-templates/.github/workflows/reusable-mergeability.yml@v2
 ```
 
 | Workflow | Verhalten |
 |---|---|
-| `reusable-pr-review.yml` | Claude-PR-Review + autonomer Autofix; setzt `ready to merge` / `needs human review`; graceful skip wenn `ANTHROPIC_API_KEY` fehlt |
+| `reusable-mergeability.yml` | **Kostenloses** Merge-Gate: Sticky-Report (Konflikt/Zielbranch/CI) + setzt `review-gate`. Keine API-Kosten |
+| `reusable-pr-review.yml` | **Optionaler** KI-Review (Anthropic API, ⚠️ metered); on-demand via Label `ai-review`; rein beratend, kein Gate |
 | `reusable-security-scan.yml` | fail-closed (Funde + Scanner-Fehler brechen ab) |
 | `reusable-ci-quality.yml` | lint / type-check / test – konfigurierbar |
 | `reusable-gitignore-audit.yml` | blocking; Pflicht-Ignores + keine getrackten Secrets |
 | `reusable-dev-standards-audit.yml` | non-blocking Hinweis-Audit |
 | `weekly-audit.yml` | Cron Mo 08:00 – braucht `ORG_AUTOMATION_TOKEN` |
+
+> Tiefer KI-Review ohne API-Kosten: `/review` aus Claude Code (Pro/Max-Abo) — lokal
+> oder als Web-Session. Die metered `reusable-pr-review.yml` ist nur der Fallback.
 
 ---
 

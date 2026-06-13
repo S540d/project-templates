@@ -1,32 +1,38 @@
 name: Reusable PR Review (Claude)
 
-# Deterministischer PR-Review via Anthropic API. Aufruf versioniert (@v1):
+# OPTIONALER, BERATENDER KI-Review via Anthropic API. ⚠️ Kostet metered API-Token.
+# Läuft NICHT automatisch — der Caller triggert ihn on-demand (Label "ai-review").
+# Aufruf versioniert (@v2):
 #
 #   jobs:
 #     pr-review:
-#       uses: S540d/project-templates/.github/workflows/reusable-pr-review.yml@v1
+#       uses: S540d/project-templates/.github/workflows/reusable-pr-review.yml@v2
 #       secrets:
 #         anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 #       with:
 #         language: 'de'
+#         model: 'claude-haiku-4-5-20251001'
 #
 # Ablauf (ein Job):
-#   review – Claude reviewt den PR-Diff, postet einen Review-Kommentar
-#            (+ Inline-Findings), setzt den Commit-Status "review-gate"
-#            und vergibt das Status-Label:
-#              - keine Findings  -> "ready to merge"     (Mensch merged manuell)
-#              - Findings übrig  -> "needs human review" (menschliche Entscheidung)
+#   review – Claude reviewt den PR-Diff und postet einen Review-Kommentar
+#            (+ Inline-Findings). REIN BERATEND: setzt KEINEN Status und KEINE
+#            Labels und blockiert den Merge nicht.
+#
+# Das Merge-Gate ("review-gate") wird stattdessen kostenlos von
+# reusable-mergeability.yml gesetzt (Konflikt-/Zielbranch-Check, keine API-Kosten).
+#
+# Primärer (kostenloser) Review-Weg: /review aus Claude Code (Pro-Abo) — lokal am
+# PC oder in einer Web-Session vom Telefon, ohne Pay-per-Token. Dieser Workflow
+# ist nur der optionale API-Fallback.
 #
 # Voraussetzungen:
 #   - Secret ANTHROPIC_API_KEY (Repo oder Org)
-#   - Trigger im Caller: pull_request (opened, synchronize, reopened)
+#   - Trigger im Caller: pull_request [labeled], if label.name == 'ai-review'
 #   - permissions im Caller:
 #       contents: read          # PR-Branch auschecken
-#       pull-requests: write    # Review-Kommentare + Labels
-#       statuses: write         # Commit-Status "review-gate"
+#       pull-requests: write    # Review-Kommentare
 #
-# Repos ohne ANTHROPIC_API_KEY: Review wird übersprungen, Gate bleibt offen
-# (mergebar). So bleiben Repos ohne Key nicht dauerhaft blockiert.
+# Repos ohne ANTHROPIC_API_KEY: Review wird übersprungen (kein Gate-Effekt).
 
 on:
   workflow_call:
@@ -46,16 +52,6 @@ on:
         required: false
         type: number
         default: 40000
-      ready_label:
-        description: 'Label, das gesetzt wird, wenn der Review sauber ist'
-        required: false
-        type: string
-        default: 'ready to merge'
-      attention_label:
-        description: 'Label, das gesetzt wird, wenn Findings menschliche Entscheidung brauchen'
-        required: false
-        type: string
-        default: 'needs human review'
     secrets:
       anthropic_api_key:
         description: 'Anthropic API Key'
@@ -64,11 +60,10 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  statuses: write
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Deterministischer Review des PR-Stands + Gate + Label.
+  # Beratender Review des PR-Stands (Kommentar + Inline-Findings, KEIN Gate/Label).
   # ---------------------------------------------------------------------------
   review:
     if: ${{ github.event_name == 'pull_request' }}
@@ -264,25 +259,16 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REVIEW_TEXT: ${{ steps.review.outputs.review_text }}
           DIFF_CHARS: ${{ steps.diff.outputs.char_count }}
-          FINDINGS: ${{ steps.review.outputs.findings }}
           MODEL: ${{ inputs.model }}
-          READY_LABEL: ${{ inputs.ready_label }}
-          ATTENTION_LABEL: ${{ inputs.attention_label }}
         run: |
-          if [ "$FINDINGS" = "yes" ]; then
-            GATE_LINE="🔴 **Merge-Gate aktiv:** Es sind Findings offen, die eine menschliche Entscheidung brauchen. Label **\`$ATTENTION_LABEL\`** gesetzt — bitte prüfen."
-          else
-            GATE_LINE="🟢 **Merge-Gate:** keine offenen Findings — Label **\`$READY_LABEL\`** gesetzt, Merge kann manuell erfolgen."
-          fi
-
-          COMMENT_BODY="## 🤖 Claude Code Review
+          COMMENT_BODY="## 🤖 Claude Code Review (beratend)
 
           $REVIEW_TEXT
 
-          $GATE_LINE
+          ℹ️ *Dieser KI-Review ist rein beratend und blockiert den Merge nicht. Das Merge-Gate (\`review-gate\`) wird kostenlos vom Mergeability-Workflow gesetzt.*
 
           ---
-          *Automatisch generiert von [reusable-pr-review.yml](https://github.com/S540d/project-templates/blob/main/.github/workflows/reusable-pr-review.yml) · Modell: \`$MODEL\` · Diff: ${DIFF_CHARS} Zeichen*"
+          *On-demand erzeugt von [reusable-pr-review.yml](https://github.com/S540d/project-templates/blob/main/.github/workflows/reusable-pr-review.yml) · Modell: \`$MODEL\` · Diff: ${DIFF_CHARS} Zeichen · ⚠️ metered API*"
 
           gh pr comment "$PR_NUMBER" \
             --repo "$GITHUB_REPOSITORY" \
@@ -327,46 +313,7 @@ jobs:
           PAYLOAD=$(jq -n --arg sha "$HEAD_SHA" --argjson comments "$COMMENTS" \
             '{ commit_id: $sha, event: "COMMENT", body: "Claude: Inline-Findings (siehe Kommentare).", comments: $comments }')
 
-          # Best effort: ungültige Positionen ignorieren, Gate hängt nicht davon ab.
+          # Best effort: ungültige Positionen ignorieren — der Review ist beratend.
           gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" \
             --method POST --input - <<< "$PAYLOAD" || \
             echo "::warning::Inline-Kommentare konnten nicht (alle) gesetzt werden — Findings stehen im Sammelkommentar."
-
-      - name: Set review-gate status and merge label
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ steps.sha.outputs.head }}
-          FINDINGS: ${{ steps.review.outputs.findings }}
-          SKIPPED: ${{ steps.review.outputs.skipped }}
-          READY_LABEL: ${{ inputs.ready_label }}
-          ATTENTION_LABEL: ${{ inputs.attention_label }}
-        run: |
-          # Default failure: wenn der findings-Output fehlt (z.B. Step abgebrochen) -> sicher blocken.
-          STATE="failure"
-          DESC="Findings offen — '$ATTENTION_LABEL' gesetzt"
-          if [ "$FINDINGS" = "no" ]; then
-            STATE="success"
-            DESC="Keine offenen Findings — '$READY_LABEL' gesetzt"
-          fi
-
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
-            --method POST \
-            -f state="$STATE" \
-            -f context="review-gate" \
-            -f description="$DESC"
-
-          # Labels nur setzen, wenn tatsächlich reviewt wurde (kein graceful skip).
-          if [ "$SKIPPED" = "true" ]; then
-            echo "Review übersprungen — keine Merge-Labels gesetzt, Gate offen."
-            exit 0
-          fi
-
-          if [ "$STATE" = "success" ]; then
-            gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --add-label "$READY_LABEL" --remove-label "$ATTENTION_LABEL" 2>/dev/null || true
-          else
-            gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --add-label "$ATTENTION_LABEL" --remove-label "$READY_LABEL" 2>/dev/null || true
-          fi

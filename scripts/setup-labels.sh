@@ -40,9 +40,13 @@ create_label "priority: low" "5fde5d" "Kann warten"
 create_label "blocked" "3d3d3d" "Blockiert - wartet auf etwas"
 create_label "ready-for-implementation" "34b13e" "Ready - kann angefangen werden"
 
-# PR-Review-Gate Labels (automatisch vom Claude-Review-Workflow gesetzt)
+# PR-Review-Gate Labels (vom Mergeability-Workflow / manuell genutzt)
 create_label "ready to merge" "0e8a16" "Review sauber/aufgelöst - Merge kann manuell erfolgen"
 create_label "needs human review" "d93f0b" "Findings brauchen menschliche Entscheidung - bitte prüfen"
+
+# Trigger-Label für den optionalen, metered KI-Review (pr-review.yml on-demand)
+create_label "ai-review" "5319e7" "Optionalen KI-Review (Anthropic API) für diesen PR anstoßen - kostet metered API"
+
 
 # Delete GitHub default labels (optional)
 echo ""

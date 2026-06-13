@@ -1,0 +1,19 @@
+name: Mergeability Report
+
+# Kostenloser Mergeability-Report + Merge-Gate (review-gate) bei jedem PR.
+# Keine API-Kosten. Dieses Repo ruft die Reusable lokal auf (gleiches Repo),
+# damit Änderungen am Branch sofort testbar sind. Downstream-Repos nutzen
+# stattdessen das Template automation-templates/mergeability.yml (@v2).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  mergeability:
+    uses: ./.github/workflows/reusable-mergeability.yml
