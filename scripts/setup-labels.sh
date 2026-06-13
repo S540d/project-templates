@@ -47,7 +47,6 @@ create_label "needs human review" "d93f0b" "Findings brauchen menschliche Entsch
 # Trigger-Label für den optionalen, metered KI-Review (pr-review.yml on-demand)
 create_label "ai-review" "5319e7" "Optionalen KI-Review (Anthropic API) für diesen PR anstoßen - kostet metered API"
 
-
 # Delete GitHub default labels (optional)
 echo ""
 echo "Removing GitHub default labels..."
