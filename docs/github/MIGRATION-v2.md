@@ -3,6 +3,14 @@
 Ablösung des metered API-Reviews (lief pro PR-Push) durch ein Drei-Schichten-Modell.
 Tracking: Issue #62.
 
+> **Status (2026-06-13): Rollout abgeschlossen.** Alle Kern-Repos (safe-my-plants,
+> 1x1_Trainer, DrawFromMemory, Pflanzkalender, Epic_Calendar, Eisenhauer) laufen auf
+> `@v2`. Das **v1-Review-Modell ist deprecated** – der alte automatische API-Review
+> (`reusable-pr-review.yml@v1` bei jedem Push) und das Ack-Label-Gate
+> (`reusable-review-gate-resolve.yml@v1`) werden nicht mehr verwendet. Neue Repos
+> direkt mit `@v2` aufsetzen. Der Tag `@v1` bleibt eingefroren (nur für etwaige
+> Alt-Stände), wird aber nicht weiter gepflegt.
+
 ## Was sich ändert
 | | vorher (v1) | nachher (v2) |
 |---|---|---|
@@ -25,10 +33,19 @@ Schnellweg mit dem Kit (aus dem project-templates-Klon):
 Das Kit kopiert `mergeability.yml` + `pr-review.yml` in `.github/workflows/`,
 setzt die Labels (inkl. `ai-review`) und druckt die nächsten Git-Schritte.
 
-## Reihenfolge (Rollout)
-1. **Pilot:** `safe-my-plants` – 2–3 echte PRs beobachten.
-2. **Kern-Batch:** `1x1_Trainer` → `DrawFromMemory` → `Pflanzkalender` → `Epic_Calendar` → `Eisenhauer`.
-3. Danach `@v1` als deprecated markieren.
+## Reihenfolge (Rollout) — ✅ abgeschlossen
+1. ✅ **Pilot:** `safe-my-plants` (PR #65, live verifiziert).
+2. ✅ **Kern-Batch:** `1x1_Trainer` (#239) → `DrawFromMemory` (#249) → `Pflanzkalender` (#178) → `Epic_Calendar` (#63) → `Eisenhauer` (#312).
+3. ✅ `@v1`-Review-Modell als deprecated markiert (siehe Status-Hinweis oben).
+
+## Branch-Protection (einheitlich)
+Das `protect-main`-Ruleset jedes Repos (gilt für `main` **und** `testing`) verlangt
+einheitlich genau die zwei Status-Checks, die in allen Repos identisch existieren:
+`review-gate` + `mergeability / mergeability` (beide aus dem v2-Modell). Repo-spezifische
+Emoji-Checks (`🔍 Code Quality & Linting` etc.) sind **nicht** als Required-Context
+gelistet, da GitHub Contexts exakt per Name matcht und die Namen je Repo abweichen –
+sie laufen weiter als CI, blockieren den Merge aber nicht. Strenge `Main`-Rulesets
+(Approvals/Signaturen) zielen auf `~DEFAULT_BRANCH` (nur `main`), nicht auf `~ALL`.
 
 ## Verifikation pro Repo
 - [ ] Mergeability-Sticky-Kommentar erscheint am PR und aktualisiert sich bei Push
