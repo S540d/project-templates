@@ -78,18 +78,41 @@ Du merged manuell, sobald CI grün und `review-gate` grün sind.
 - Non-fast-forward blockiert
 - Required Status Checks (siehe Tabelle unten)
 
-### Required Status Checks pro Repo-Typ (Issue #69)
+### Test-Ebenen (Issue #69)
 
-Der `quality / quality`-Check (lint + type-check + test via `reusable-ci-quality.yml`)
-ist **nur in Repos mit Node-Projekt** (`package.json`) verpflichtend. Reine
-Doku-/Template-Repos ohne `package.json` haben nichts zu linten/testen — dort
-würde der Check mangels Lockfile (`npm ci`) immer scheitern.
+Tests laufen auf zwei Ebenen. **Leitprinzip:** Was als kostenloser Workflow ohne
+Claude-API in CI laufen kann, ist **verbindlich auf GitHub** (required Gate) — denn
+nur das greift auch in Web-/Telefon-Sessions und ist nicht per `--no-verify`
+umgehbar. Alles Weitere läuft **lokal „in der Regel"** (Komfort, kein Gate).
 
-| Repo-Typ | Beispiel | `review-gate` | `mergeability / mergeability` | `quality / quality` |
-|---|---|:---:|:---:|:---:|
-| **Node-App** (hat `package.json`) | EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender, safe_my_plants, CD-to-Spotify, epic_Calendar | ✅ required | ✅ required | ✅ **required** |
-| **Doku-/Template-Repo** (kein `package.json`) | project-templates | ✅ required | ✅ required | ❌ **nicht eintragen** |
+#### Ebene A — verbindlich auf GitHub (required, kostenlos, kein API)
 
-**Einrichtung in einem Node-Repo:**
-1. Caller kopieren: `automation-templates/ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml`
-2. **Erst nach dem ersten erfolgreichen Lauf** `quality / quality` als required Status-Check ins Ruleset eintragen (sonst wartet GitHub auf einen nie laufenden Check).
+| Check (Status-Context) | Prüft | Node nötig? | Gilt für |
+|---|---|:---:|---|
+| `review-gate` | Merge-Gate (Konfliktfreiheit) | nein | **alle Repos** |
+| `mergeability / mergeability` | Mergeability-Report | nein | **alle Repos** |
+| `security-scan / security-scan` | Hardcoded Keys/Tokens + getrackte Secrets | nein | **alle Repos** |
+| `gitignore-audit / gitignore-audit` | `.gitignore`-Pflichteinträge + keine Secrets getrackt | nein | **alle Repos** |
+| `quality / quality` | lint + type-check + test | **ja** | **nur Node-Repos** (Ausnahme: project-templates) |
+
+> **Begründete Abweichung:** `quality / quality` braucht `package.json`/Lockfile.
+> In reinen Doku-/Template-Repos (project-templates) würde `npm ci` immer scheitern
+> → dort **nicht** eintragen. Alle anderen Gates gelten ausnahmslos überall.
+
+**Node-Repos:** EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender,
+safe_my_plants, CD-to-Spotify, epic_Calendar.
+
+#### Ebene B — lokal „in der Regel" (optional, kein Gate)
+
+| Check | Wo | Hinweis |
+|---|---|---|
+| `pre-push`: lint + type-check + prettier | Node-Repos | `dev-standards/base/pre-push.base`; umgehbar via `--no-verify` (nur auf explizite Bitte) |
+| dev-standards-audit | alle | lokal/wöchentlicher Cron-Audit; **kein** Merge-Gate (würde Repos bei Standards-Drift koppeln) |
+| E2E-/Device-Tests | wo nicht CI-machbar | echte Geräte/Secrets/flaky → Release-Checklist, nie Merge-Gate |
+
+**Einrichtung eines neuen Gates pro Repo:**
+1. Caller kopieren aus `automation-templates/`:
+   - `security-scan.yml`, `gitignore-audit.yml` → `.github/workflows/` (alle Repos)
+   - `ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml` (nur Node-Repos)
+2. **Erst nach dem ersten erfolgreichen Lauf** den Status-Check ins Ruleset eintragen
+   (sonst wartet GitHub auf einen nie laufenden Check).

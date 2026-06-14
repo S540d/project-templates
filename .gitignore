@@ -1,2 +1,20 @@
 # Backups von apply-rulesets.sh (Issue #7)
 ruleset-backups/
+
+# Secrets / sensible Dateien (dev-standards Pflichteinträge, Issue #69)
+.env
+.env.local
+.env.*.local
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.p8
+
+# Interne, nicht-öffentliche Docs
+docs/private/
+
+# Claude Code – nur maschinenspezifische Artefakte ignorieren.
+# .claude/commands/ wird bewusst getrackt (Issue #31) → NICHT ignorieren.
+.claude/settings.local.json
+.claude/cache/
