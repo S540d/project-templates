@@ -314,6 +314,11 @@ blockiert den Merge **nicht**. Verbraucht Anthropic-API-Token — nur bewusst nu
 Schließt die Lücke des vorhandenen `reusable-ci-quality.yml`, das vorher keinen Caller hatte
 und damit nie automatisch ausgelöst wurde. Jetzt läuft lint + type-check + tests bei jedem PR.
 
+> **Nur in Repos mit Node-Projekt** (`package.json`). Reine Doku-/Template-Repos
+> (z. B. project-templates selbst) bekommen weder den Caller noch den required
+> Check `quality / quality` — ohne Lockfile schlägt `npm ci` immer fehl.
+> Siehe `dev-standards/global-policy.md` → „Required Status Checks pro Repo-Typ".
+
 ### Einrichtung pro Repo (Web oder React Native)
 
 1. Caller aus `automation-templates/` kopieren:
