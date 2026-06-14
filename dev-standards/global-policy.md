@@ -83,6 +83,24 @@ Du merged manuell, sobald CI grün und `review-gate` grün sind.
 - Non-fast-forward blockiert
 - Required Status Checks (siehe Tabelle unten)
 
+### Soll-Struktur Rulesets (Issue #74)
+
+Jedes Repo hat genau **ein** aktives Ruleset `protect-main`, das beide Branches abdeckt.
+Weitere Rulesets nur bei bewusstem Bedarf:
+
+| Ruleset | Branches | Rules | Wer hat es |
+|---|---|---|---|
+| `protect-main` | `main` + `testing` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos** |
+| `Main` (legacy) | `~DEFAULT_BRANCH` | pull_request approvals=1 + Admin-Bypass | EPG, Eisenhauer, 1x1_Trainer — **deaktiviert** (Issue #74); Approvals werden über protect-main geregelt wenn nötig |
+
+**Bewusst nicht vereinheitlicht / nicht vorhanden:**
+- Kein separates `protect-testing`-Ruleset — `protect-main` deckt `testing` bereits ab
+- Kein `Copilot review`-Ruleset — Copilot-Review wird nicht mehr genutzt (Issue #74)
+
+**Schutzgrad main vs. testing:**
+- `main`: `pull_request` ohne `dismiss_stale_reviews` + `review_gate` required → kein Merge bei Konflikt
+- `testing`: gleiche required checks, aber kein Approval nötig — bewusst weniger streng (Feature-Branches landen hier zuerst)
+
 ### Test-Ebenen (Issue #69)
 
 Tests laufen auf zwei Ebenen. **Leitprinzip:** Was als kostenloser Workflow ohne
@@ -98,14 +116,16 @@ umgehbar. Alles Weitere läuft **lokal „in der Regel"** (Komfort, kein Gate).
 | `mergeability / mergeability` | Mergeability-Report | nein | **alle Repos** |
 | `security-scan / security-scan` | Hardcoded Keys/Tokens + getrackte Secrets | nein | **alle Repos** |
 | `gitignore-audit / gitignore-audit` | `.gitignore`-Pflichteinträge + keine Secrets getrackt | nein | **alle Repos** |
-| `quality / quality` | lint + type-check + test | **ja** | **nur Node-Repos** (Ausnahme: project-templates) |
+| `🔍 Code Quality & Linting` (EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender, CD-to-Spotify, epic_Calendar) oder `lint-and-typecheck` (safe-my-plants) | lint + type-check + test | **ja** | **nur Node-Repos** (Ausnahme: project-templates) |
 
-> **Begründete Abweichung:** `quality / quality` braucht `package.json`/Lockfile.
+> **Begründete Abweichung:** Der Quality-Check braucht `package.json`/Lockfile.
 > In reinen Doku-/Template-Repos (project-templates) würde `npm ci` immer scheitern
 > → dort **nicht** eintragen. Alle anderen Gates gelten ausnahmslos überall.
+> Der Check-Context-Name entspricht dem tatsächlichen Job-Namen im jeweiligen `ci-cd.yml`
+> (nicht `quality / quality` aus `reusable-ci-quality.yml` — wird nicht genutzt).
 
 **Node-Repos:** EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender,
-safe_my_plants, CD-to-Spotify, epic_Calendar.
+safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
 
 #### Ebene B — lokal „in der Regel" (optional, kein Gate)
 
