@@ -43,18 +43,23 @@ Alle Repos folgen diesem einheitlichen Schema:
 | Datei | Status | Zweck |
 |---|---|---|
 | `CLAUDE.md` (Root) | **committet** | Projektinstruktionen für Claude — öffentlich, versioniert |
-| `.claude/` | **gitignored** | Lokale Commands, Settings, Daten — nie committen |
+| `.claude/commands/` | **committet** | Geteilte Slash-Commands — versioniert (Issue #31) |
+| `.claude/settings.local.json`, `.claude/cache/`, `.claude/memory/` | **gitignored** | Maschinenspezifisch, lokal |
 
-### `.gitignore`-Pflichtzeile
+### `.gitignore`-Pflichtzeilen für Claude Code
 Jedes Repo muss in `.gitignore` enthalten:
 ```
-# Claude Code local files (commands, settings – never commit)
-.claude/
+# Claude Code – nur maschinenspezifische Artefakte ignorieren.
+# .claude/commands/ wird bewusst getrackt (Issue #31) → NICHT ignorieren.
+.claude/settings.local.json
+.claude/cache/
+.claude/memory/
 ```
 
 ### Warum
 - `CLAUDE.md` im Root wird von Claude Code automatisch gelesen und ist für alle Entwickler sichtbar
-- `.claude/` enthält lokale Commands und Settings, die gerätespezifisch sind und nicht ins Repo gehören
+- `.claude/commands/` enthält geteilte Slash-Commands, die für alle Entwickler im Repo gelten → versioniert (Issue #31)
+- Maschinenspezifische Artefakte (Settings, Cache, Memory) gehören nicht ins Repo
 
 ## PR-Review & Merge-Gate (kostenlos + abo-basiert)
 Die früher metered, pro PR laufende Anthropic-API ist abgelöst. Neues Modell:
