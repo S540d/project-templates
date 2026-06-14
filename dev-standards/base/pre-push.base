@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+# ─────────────────────────────────────────────────────────────────────────
+# Optionaler Pre-Push Hook – schnelles Vorab-Feedback (Issue #69)
+# Kein Gate: CI (ci-quality.yml) ist das required Gate, nicht dieser Hook.
+# Installieren: cp dev-standards/base/pre-push.base .husky/pre-push
+#
+# Umgehbar via: git push --no-verify  (nur auf explizite Bitte, analog --admin)
+# ─────────────────────────────────────────────────────────────────────────
+
+echo "🔍 Pre-push: schnelle Quality-Checks (lint + type-check + prettier)..."
+
+# Lint
+if npm run lint --if-present; then
+  echo "✅ Lint OK"
+else
+  echo "❌ Lint fehlgeschlagen – Push abgebrochen."
+  echo "   Beheben oder mit --no-verify überspringen (nur auf explizite Bitte)."
+  exit 1
+fi
+
+# Type-Check
+if npm run type-check --if-present; then
+  echo "✅ Type-Check OK"
+else
+  echo "❌ Type-Check fehlgeschlagen – Push abgebrochen."
+  exit 1
+fi
+
+# Prettier (nur check, kein Auto-Fix beim Push)
+if npm run format:check --if-present; then
+  echo "✅ Prettier OK"
+else
+  echo "❌ Prettier-Fehler – Push abgebrochen."
+  echo "   Beheben mit: npm run format"
+  exit 1
+fi
+
+echo "✅ Pre-push checks passed."

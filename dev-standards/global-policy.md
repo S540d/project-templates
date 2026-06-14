@@ -30,7 +30,7 @@ gh pr create --base testing --title "Fix #XXX: ..." --body "..."
 - PRs immer gegen `testing`, nie direkt gegen `main`
 - Titel: Issue-Nummer referenzieren
 - CI/CD: Alle Checks müssen grün sein — **kein Merge bei CI-Fail**
-- **Vor Push:** lokale Tests ausführen (`npm test` oder projektspezifisch)
+- **CI erzwingt lint/type-check/test bei jedem PR** (`ci-quality.yml`, required). Optionaler lokaler `pre-push` als schnelles Vorab-Feedback — kein Gate (umgehbar via `--no-verify`, nur auf explizite Bitte).
 - Merge Feature → Testing: `gh pr merge <nr> --squash --delete-branch`
 - Merge Testing → Main: `gh pr merge <nr> --squash` (kein `--delete-branch`!)
 - Merge auf main braucht `--admin` (Branch Protection)
@@ -76,4 +76,4 @@ Du merged manuell, sobald CI grün und `review-gate` grün sind.
 `main` und `testing` sind in allen Repos per Ruleset geschützt:
 - Deletion blockiert
 - Non-fast-forward blockiert
-- Required Status Checks (CI muss grün sein)
+- Required Status Checks: `review-gate`, `mergeability / mergeability`, **`quality / quality`** (Issue #69)

@@ -309,4 +309,32 @@ blockiert den Merge **nicht**. Verbraucht Anthropic-API-Token — nur bewusst nu
 
 ---
 
+## 🔒 Required Quality Gate — `ci-quality.yml` (Issue #69)
+
+Schließt die Lücke des vorhandenen `reusable-ci-quality.yml`, das vorher keinen Caller hatte
+und damit nie automatisch ausgelöst wurde. Jetzt läuft lint + type-check + tests bei jedem PR.
+
+### Einrichtung pro Repo (Web oder React Native)
+
+1. Caller aus `automation-templates/` kopieren:
+   ```bash
+   # Web-Projekt:
+   cp automation-templates/ci-cd-web.yml .github/workflows/ci-quality.yml
+   # React-Native-Projekt:
+   cp automation-templates/ci-cd-react-native.yml .github/workflows/ci-quality.yml
+   ```
+2. Branch-Protection: **`quality / quality`** als required Status-Check ergänzen
+   (analog `review-gate` und `mergeability / mergeability`).
+
+### Optionaler lokaler pre-push (kein Gate, nur Vorab-Feedback)
+
+```bash
+cp dev-standards/base/pre-push.base .husky/pre-push
+chmod +x .husky/pre-push
+```
+
+Umgehbar via `git push --no-verify` — **nur auf explizite Bitte** (analog `--no-verify` beim Commit).
+
+---
+
 **Fragen?** Siehe Dokumentation oder lauf `./scripts/validate-release.sh` für Details.
