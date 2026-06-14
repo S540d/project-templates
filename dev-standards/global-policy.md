@@ -30,7 +30,7 @@ gh pr create --base testing --title "Fix #XXX: ..." --body "..."
 - PRs immer gegen `testing`, nie direkt gegen `main`
 - Titel: Issue-Nummer referenzieren
 - CI/CD: Alle Checks müssen grün sein — **kein Merge bei CI-Fail**
-- **CI erzwingt lint/type-check/test bei jedem PR** (`ci-quality.yml`, required). Optionaler lokaler `pre-push` als schnelles Vorab-Feedback — kein Gate (umgehbar via `--no-verify`, nur auf explizite Bitte).
+- **CI erzwingt lint/type-check/test bei jedem PR** (`ci-quality.yml`, required in Node-Repos — siehe Tabelle „Required Status Checks pro Repo-Typ"). Optionaler lokaler `pre-push` als schnelles Vorab-Feedback — kein Gate (umgehbar via `--no-verify`, nur auf explizite Bitte).
 - Merge Feature → Testing: `gh pr merge <nr> --squash --delete-branch`
 - Merge Testing → Main: `gh pr merge <nr> --squash` (kein `--delete-branch`!)
 - Merge auf main braucht `--admin` (Branch Protection)
@@ -76,4 +76,20 @@ Du merged manuell, sobald CI grün und `review-gate` grün sind.
 `main` und `testing` sind in allen Repos per Ruleset geschützt:
 - Deletion blockiert
 - Non-fast-forward blockiert
-- Required Status Checks: `review-gate`, `mergeability / mergeability`, **`quality / quality`** (Issue #69)
+- Required Status Checks (siehe Tabelle unten)
+
+### Required Status Checks pro Repo-Typ (Issue #69)
+
+Der `quality / quality`-Check (lint + type-check + test via `reusable-ci-quality.yml`)
+ist **nur in Repos mit Node-Projekt** (`package.json`) verpflichtend. Reine
+Doku-/Template-Repos ohne `package.json` haben nichts zu linten/testen — dort
+würde der Check mangels Lockfile (`npm ci`) immer scheitern.
+
+| Repo-Typ | Beispiel | `review-gate` | `mergeability / mergeability` | `quality / quality` |
+|---|---|:---:|:---:|:---:|
+| **Node-App** (hat `package.json`) | EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender, safe_my_plants, CD-to-Spotify, epic_Calendar | ✅ required | ✅ required | ✅ **required** |
+| **Doku-/Template-Repo** (kein `package.json`) | project-templates | ✅ required | ✅ required | ❌ **nicht eintragen** |
+
+**Einrichtung in einem Node-Repo:**
+1. Caller kopieren: `automation-templates/ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml`
+2. **Erst nach dem ersten erfolgreichen Lauf** `quality / quality` als required Status-Check ins Ruleset eintragen (sonst wartet GitHub auf einen nie laufenden Check).
