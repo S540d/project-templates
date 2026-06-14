@@ -1,0 +1,17 @@
+name: Gitignore Audit
+
+# Kostenloser .gitignore-/Secret-Tracking-Audit bei jedem PR (Issue #69, Ebene A – verbindlich).
+# Kein npm nötig → gilt einheitlich in ALLEN Repos, auch project-templates selbst.
+# Dieses Repo ruft die Reusable lokal auf; Downstream-Repos nutzen das Template
+# automation-templates/gitignore-audit.yml (@v1).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  gitignore-audit:
+    uses: ./.github/workflows/reusable-gitignore-audit.yml

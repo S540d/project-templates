@@ -1,0 +1,17 @@
+name: Security Scan
+
+# Caller-Template (Issue #69, Ebene A – verbindlich in ALLEN Repos).
+# Kostenloser Secret-/Token-Scan über getrackte Dateien, kein API, kein npm.
+# Kopieren nach .github/workflows/security-scan.yml; danach
+# security-scan / security-scan als required Status-Check eintragen.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    uses: S540d/project-templates/.github/workflows/reusable-security-scan.yml@v1
