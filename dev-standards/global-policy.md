@@ -36,6 +36,10 @@ gh pr create --base testing --title "Fix #XXX: ..." --body "..."
 - Merge auf main braucht `--admin` (Branch Protection)
 - `--no-verify` und `--admin` nur auf explizite Bitte
 
+### Lokales Branch-Cleanup
+- Verwaiste Feature-Branches (Upstream `[gone]`, PR gemergt+remote gelöscht) dürfen pauschal lokal gelöscht werden (`git branch -D`).
+- **Ausnahme: `main` und `testing` NIE löschen** — auch nicht, wenn ihr Upstream `[gone]` ist. Ein fehlender `origin/main`/`origin/testing` ist ein **wiederherzustellender Defekt**: lokalen Branch behalten und nach origin zurückpushen (testing dabei sinnvoll mit main aktualisieren, sodass testing ≥ main).
+
 ## CLAUDE.md Standard
 
 Alle Repos folgen diesem einheitlichen Schema:
