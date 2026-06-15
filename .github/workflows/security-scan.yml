@@ -1,0 +1,17 @@
+name: Security Scan
+
+# Kostenloser Secret-/Token-Scan bei jedem PR (Issue #69, Ebene A – verbindlich).
+# Kein npm nötig → gilt einheitlich in ALLEN Repos, auch project-templates selbst.
+# Dieses Repo ruft die Reusable lokal auf; Downstream-Repos nutzen das Template
+# automation-templates/security-scan.yml (@v1).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    uses: ./.github/workflows/reusable-security-scan.yml
