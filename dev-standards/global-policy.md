@@ -36,6 +36,22 @@ gh pr create --base testing --title "Fix #XXX: ..." --body "..."
 - Merge auf main braucht `--admin` (Branch Protection)
 - `--no-verify` und `--admin` nur auf explizite Bitte
 
+### Lokales Branch-Cleanup
+- Verwaiste Feature-Branches (Upstream `[gone]`, PR gemergt+remote gelöscht) dürfen pauschal lokal gelöscht werden (`git branch -D`).
+- **Ausnahme: `main` und `testing` NIE löschen** — auch nicht, wenn ihr Upstream `[gone]` ist. Ein fehlender `origin/main`/`origin/testing` ist ein **wiederherzustellender Defekt**: lokalen Branch behalten und nach origin zurückpushen (testing dabei sinnvoll mit main aktualisieren, sodass testing ≥ main).
+
+## README Standard (Issue #80)
+
+Gilt für alle Web-/PWA-/App-Projekte:
+
+- **Kein `## Setup`-Abschnitt** — Entwickler-Einrichtung gehört in `CLAUDE.md`, nicht in README.
+- **Kein Verweis auf Play Store oder App Store** — der README ist neutral; er impliziert nicht, dass es eine App gibt.
+- **Web-Link angeben** — der Leser darf die Web-Version nutzen; der Link ist der primäre Einstieg.
+- **Features aktuell halten** — bei neuen Features/Commits die Features-Liste im README mitpflegen.
+- **Struktur:** Titel + Kurzbeschreibung → Live-Link → Tech Stack → Features → License.
+
+Hardware-/Tool-Projekte ohne Web-Version sind ausgenommen.
+
 ## CLAUDE.md Standard
 
 Alle Repos folgen diesem einheitlichen Schema:
