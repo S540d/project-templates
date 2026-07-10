@@ -1,0 +1,37 @@
+# Dependabot – kostenlose Dependency-Updates + Security-Alerts (Issue #60).
+# Ersetzt zusammen mit codeql.yml den kostenpflichtigen Anthropic-API-Scan.
+#
+# Kopieren nach .github/dependabot.yml (NICHT nach workflows/ — liegt direkt
+# unter .github/). GitHub liest die Datei automatisch, kein Trigger nötig.
+#
+# package-ecosystem an das Repo anpassen:
+#   - Node-Repos:            "npm"  (deckt npm, yarn, pnpm ab)
+#   - reine Doc/Config-Repos: nur "github-actions" behalten, "npm"-Block löschen
+#
+# open-pull-requests-limit klein halten, damit Dependabot die PR-Queue nicht flutet.
+
+version: 2
+updates:
+  # GitHub-Actions-Versionen (gilt für ALLE Repos, auch ohne package.json).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+
+  # NPM/Yarn/PNPM-Abhängigkeiten (nur Node-Repos; sonst diesen Block entfernen).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+    # Patch-/Minor-Updates gebündelt, damit nicht pro Paket ein PR aufgeht.
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
