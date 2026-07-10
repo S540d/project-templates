@@ -11,7 +11,7 @@ Zentrale Vorlagen und Standards für alle Projekte von [DevSven](https://github.
 | `dev-standards/` | Kanonische Basis-Configs (Prettier, EditorConfig, ESLint, TSConfig, Pre-Commit) |
 | `dev-standards/global-policy.md` | Verbindliche Branch-Strategie, Merge-Regeln, CI-Policy |
 | `.github/workflows/` | Reusable Workflows (PR-Review, Security-Scan, Standards-Audit, Weekly-Audit) |
-| `scripts/` | `sync-standards.sh`, `apply-rulesets.sh`, `setup-labels.sh` |
+| `scripts/` | `sync-standards.sh`, `apply-rulesets.sh`, `setup-labels.sh`, `clean-local-cache.sh` |
 | `automation-templates/` | CI/CD Workflow-Templates, Pre-Commit Hooks, Validation Scripts |
 | `technische_vorgaben.md` | Code-Qualität, Testing, TypeScript, Build, CI/CD, Android, PWA |
 | `ux-vorgaben.md` | Design-System, Farben, Typography, Accessibility (WCAG 2.1 AA), i18n |
@@ -68,6 +68,25 @@ feature/issue-XXX → testing → main
 - main braucht `--admin`
 
 Vollständig dokumentiert in `dev-standards/global-policy.md`.
+
+---
+
+## Lokaler Cache-Cleanup
+
+`scripts/clean-local-cache.sh` ergänzt `cache-cleanup.yml` (GitHub-Actions-Cache)
+um die lokale Festplattenseite (`node_modules`, `dist`, `build`, `.expo`,
+`android/.gradle`, `android/app/build`). Manuell, kein Automatismus (Cron/launchd) —
+bewusste Entscheidung, siehe `dev-standards/global-policy.md`.
+
+```bash
+./scripts/clean-local-cache.sh                 # nur Größenreport, nichts löschen
+./scripts/clean-local-cache.sh --dry-run       # zeigt geplante Löschungen
+./scripts/clean-local-cache.sh --yes           # löscht ohne Rückfrage je Projekt
+./scripts/clean-local-cache.sh --yes --global  # zusätzlich ~/.gradle/caches, ~/.npm
+```
+
+Als Claude-Command in jedem Projekt verfügbar: `/cache-clean`
+(verteilt via `sync-standards.sh`, siehe `claude-commands/cache-clean.md`).
 
 ---
 
