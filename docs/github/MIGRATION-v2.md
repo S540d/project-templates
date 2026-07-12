@@ -3,9 +3,10 @@
 Ablösung des metered API-Reviews (lief pro PR-Push) durch ein Drei-Schichten-Modell.
 Tracking: Issue #62.
 
-> **Status (2026-06-13): Rollout abgeschlossen.** Alle Kern-Repos (safe-my-plants,
-> 1x1_Trainer, DrawFromMemory, Pflanzkalender, Epic_Calendar, Eisenhauer) laufen auf
-> `@v2`. Das **v1-Review-Modell ist deprecated** – der alte automatische API-Review
+> **Status (2026-07-05): Rollout abgeschlossen.** Alle Repos (safe-my-plants,
+> 1x1_Trainer, DrawFromMemory, Pflanzkalender, Epic_Calendar, Eisenhauer,
+> EnergyPriceGermany, CD-to-Spotify-PWA) laufen auf `@v2`. Das **v1-Review-Modell
+> ist deprecated** – der alte automatische API-Review
 > (`reusable-pr-review.yml@v1` bei jedem Push) und das Ack-Label-Gate
 > (`reusable-review-gate-resolve.yml@v1`) werden nicht mehr verwendet. Neue Repos
 > direkt mit `@v2` aufsetzen. Der Tag `@v1` bleibt eingefroren (nur für etwaige
@@ -36,7 +37,8 @@ setzt die Labels (inkl. `ai-review`) und druckt die nächsten Git-Schritte.
 ## Reihenfolge (Rollout) — ✅ abgeschlossen
 1. ✅ **Pilot:** `safe-my-plants` (PR #65, live verifiziert).
 2. ✅ **Kern-Batch:** `1x1_Trainer` (#239) → `DrawFromMemory` (#249) → `Pflanzkalender` (#178) → `Epic_Calendar` (#63) → `Eisenhauer` (#312).
-3. ✅ `@v1`-Review-Modell als deprecated markiert (siehe Status-Hinweis oben).
+3. ✅ **Nachzügler:** `EnergyPriceGermany` (#344) → `CD-to-Spotify-PWA` (#51, Issue #64).
+4. ✅ `@v1`-Review-Modell als deprecated markiert (siehe Status-Hinweis oben).
 
 ## Branch-Protection (einheitlich)
 Das `protect-main`-Ruleset jedes Repos (gilt für `main` **und** `testing`) verlangt

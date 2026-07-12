@@ -157,3 +157,11 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
    - `ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml` (nur Node-Repos)
 2. **Erst nach dem ersten erfolgreichen Lauf** den Status-Check ins Ruleset eintragen
    (sonst wartet GitHub auf einen nie laufenden Check).
+
+## Lokaler Cache-Cleanup
+
+Neben dem GitHub-Actions-Cache (`cache-cleanup.yml`, wöchentlich) gibt es einen
+lokalen Cache-Cleanup-Mechanismus für `node_modules`/`dist`/`build`/`.expo`/
+Gradle-Caches: `scripts/clean-local-cache.sh` + Claude-Command `/cache-clean`.
+Bewusst **manuell**, kein automatischer Cron/launchd-Job — der Cleanup wird bei
+Bedarf selbst ausgelöst (z. B. im Rahmen des Tagesabschlusses).

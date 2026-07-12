@@ -116,6 +116,41 @@ export default defineConfig({
 4. **Testing:** Lokal mit `npm run build` testen vor dem Push
 5. **Dokumentation:** README.md mit Deployment-Anleitung
 
+## 🐛 Troubleshooting
+
+### Transienter Deploy-Fehler durch Doppel-Trigger (gh-pages + auto pages-build)
+
+**Betrifft:** Projekte, die per eigenem Actions-Workflow auf einen `gh-pages`-Branch pushen (Pages-Konfiguration `source: gh-pages`, `build_type: legacy`).
+
+**Ursache:** GitHub triggert nach jedem Push auf `gh-pages` **zusätzlich automatisch** einen eigenen `pages-build-deployment`-Run (via `actions/deploy-pages@v5`). Dieser Doppel-Trigger ist strukturell und führt reproduzierbar zu transienten Deploy-Fehlern.
+
+**Symptom:**
+- Der eigene `deploy.yml`-Workflow zeigt **success** (Build ok, Push auf `gh-pages` ok).
+- Die Live-Seite bleibt trotzdem auf dem **alten Bundle** hängen.
+- In `gh run list` erscheint `pages-build-deployment` (Branch `gh-pages`) als **failure**:
+  ```
+  ##[error]Deployment failed, try again later.
+  ```
+- Das ist ein transienter GitHub-Infrastrukturfehler, kein Code- oder Workflow-Fehler.
+
+**Warum ein einfacher Re-Run nicht hilft:** Ein erneuter Lauf des Deploy-Workflows findet `No changes to commit` (der `gh-pages`-Branch ist ja bereits korrekt), pusht nichts → GitHub triggert keinen neuen Pages-Build. Die Live-Seite bleibt alt.
+
+**Workaround (verifiziert):** Einen leeren Commit auf `gh-pages` pushen, um `pages-build-deployment` neu zu triggern — über einen isolierten Worktree, damit `main`/`testing` unberührt bleiben:
+
+```bash
+git worktree add /tmp/ghp-retrigger gh-pages
+cd /tmp/ghp-retrigger && git commit --allow-empty -m "chore: re-trigger pages build" && git push origin gh-pages
+cd <repo> && git worktree remove /tmp/ghp-retrigger --force
+```
+
+Danach verifizieren, dass sich der ausgelieferte Bundle-Hash geändert hat:
+
+```bash
+curl -s https://<user>.github.io/<repo>/ | grep -o 'index-[a-f0-9]*\.js'
+```
+
+**Strukturelle Vermeidung (optional zu prüfen):** Umstieg auf `build_type: workflow` (statt `legacy` branch-basiert) vermeidet den Doppel-Trigger vermutlich, da dann kein zusätzlicher `pages-build-deployment`-Run mehr über den `gh-pages`-Branch angestoßen wird.
+
 ## 🔗 Nützliche Links
 
 - [GitHub Pages Dokumentation](https://docs.github.com/en/pages)
