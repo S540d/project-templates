@@ -1,0 +1,50 @@
+name: CodeQL
+
+# Kostenlose statische Code-Analyse (SAST) via GitHub CodeQL (Issue #60).
+# Ersetzt zusammen mit dependabot.yml den kostenpflichtigen Anthropic-API-Scan.
+# Ergänzt den bestehenden security-scan.yml (Secret-Scan) um Code-Schwachstellen.
+#
+# Kopieren nach .github/workflows/codeql.yml.
+#
+# languages an das Repo anpassen (CodeQL braucht die konkrete Sprache):
+#   - JS/TS-Web/React-Native:  'javascript-typescript'
+#   - reine Doc/Config-Repos:   kein CodeQL nötig — diese Datei weglassen
+# Mehrere Sprachen: als YAML-Liste unter matrix.language ergänzen.
+
+on:
+  pull_request:
+    branches: [main, testing]
+  push:
+    branches: [main]
+  schedule:
+    # Wöchentlicher Full-Scan (fängt neu bekannt gewordene CVEs ohne Code-Änderung).
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write   # CodeQL-Findings in den Security-Tab schreiben
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
