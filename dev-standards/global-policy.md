@@ -77,6 +77,30 @@ Jedes Repo muss in `.gitignore` enthalten:
 - `.claude/commands/` enthält geteilte Slash-Commands, die für alle Entwickler im Repo gelten → versioniert (Issue #31)
 - Maschinenspezifische Artefakte (Settings, Cache, Memory) gehören nicht ins Repo
 
+## Memory vs. CLAUDE.md (Issue #94)
+
+Faustregel, wann eine Erkenntnis in die auto-memory gehört und wann ins
+projekteigene `CLAUDE.md`:
+
+| | **CLAUDE.md** | **Memory** |
+|---|---|---|
+| Inhalt | Bewusst verfasste, stabile Projekt-Doku: Architektur, Konventionen, Deploy-Prozess, Setup | Informelle, aus Konversationen abgeleitete Lektionen/Fallstricke/Entscheidungen |
+| Pflege | Von Hand geschrieben und aktualisiert | Automatisch von Claude während der Arbeit geschrieben |
+| Geltung | Für alle Menschen im Projekt lesbar, versioniert, Teil des Repos | Nur für Claude selbst, sessionübergreifend, gitignored |
+| Lebensdauer | Dauerhaft, solange die Doku stimmt | Kann veralten, wird bei Bedarf korrigiert/gelöscht |
+
+**Hochstufen:** Tritt ein Memory-Fallstrick wiederholt auf (≥ 2× in
+unterschiedlichen Sessions relevant) oder betrifft er eine Struktur-
+entscheidung, die jeder Mitentwickler kennen müsste (z. B. „`docs/private/`
+ist der falsche Ort, echte Doku liegt in `docs/`"), gehört er nach
+`CLAUDE.md` hochgestuft — und der Memory-Eintrag wird danach entfernt
+(kein Duplikat an zwei Orten).
+
+**Beispiel:** Ein einmalig aufgetretener Verwechslungs-Fallstrick
+(„Play-Store-Listing existierte doppelt") bleibt Memory, solange er nicht
+strukturell ist. Eine dauerhafte Konvention („Doku für Menschen liegt in
+`docs/`, nicht in `docs/private/`") gehört in `CLAUDE.md`.
+
 ## PR-Review & Merge-Gate (kostenlos + abo-basiert)
 Die früher metered, pro PR laufende Anthropic-API ist abgelöst. Neues Modell:
 
