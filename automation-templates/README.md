@@ -19,8 +19,29 @@ automation-templates/
 ├── validate-release-generic.sh         # Validation Script (Generic)
 ├── ci-cd-react-native.yml              # GitHub Actions (React Native)
 ├── ci-cd-web.yml                       # GitHub Actions (Web)
-└── ci-cd-generic.yml                   # GitHub Actions (Generic)
+├── ci-cd-generic.yml                   # GitHub Actions (Generic)
+├── security-scan.yml                   # Secret-/Token-Scan (Caller → reusable @v1)
+├── dependabot.yml                      # Dependency-Updates + Security-Alerts (Issue #60)
+└── codeql.yml                          # Statische Code-Analyse / SAST (Issue #60)
 ```
+
+## 🔒 Security-Stack (kostenlos, ohne API)
+
+Drei kostenlose GitHub-native Bausteine ersetzen den früheren metered
+Anthropic-API-Scan (Issue #60). Der Anthropic-`pr-review` bleibt nur noch als
+optionaler, rein beratender On-demand-Review (Label `ai-review`) bestehen.
+
+| Baustein | Datei (Ziel im Repo) | Deckt ab |
+|----------|----------------------|----------|
+| Secret-Scan | `.github/workflows/security-scan.yml` | Hardcoded Keys, getrackte Keystores |
+| Dependabot | `.github/dependabot.yml` | Verwundbare Dependencies + Actions-Versionen |
+| CodeQL | `.github/workflows/codeql.yml` | Code-Schwachstellen (SAST) |
+
+**Ausrollen pro Repo:**
+1. `dependabot.yml` → `.github/dependabot.yml` (Ecosystem anpassen: `npm` nur bei Node-Repos).
+2. `codeql.yml` → `.github/workflows/codeql.yml` (nur JS/TS-Repos; `languages` anpassen).
+3. In den Repo-Settings unter *Security* die *Dependabot alerts* aktivieren.
+4. `ANTHROPIC_API_KEY` bleibt optional — nur nötig, wer den `ai-review`-Fallback nutzt.
 
 ## 🚀 Schnellstart
 
