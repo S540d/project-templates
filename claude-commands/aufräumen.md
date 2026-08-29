@@ -4,6 +4,13 @@ Führe den täglichen Cleanup-Workflow durch:
 
 ## 0. Branch-Übersicht: testing vs. main (alle Repos)
 
+**Nur lokal anwendbar** — der Pfad `/Users/svenstrohkark/...` existiert nur auf
+diesem Mac. In Remote-Execution-Sessions trifft `[ -d "$dir/.git" ]` nie zu, die
+Schleife läuft ohne Ausgabe und ohne Fehler durch. Läuft die Session nicht lokal
+auf diesem Rechner: Abschnitt überspringen und dem Nutzer explizit sagen, dass
+diese Prüfung hier nicht durchgeführt werden konnte — nicht stillschweigend
+weiterlaufen.
+
 Erstelle zu Beginn eine Tabelle aller Repositories mit dem Stand von `testing` gegenüber `main`:
 
 ```bash
@@ -37,9 +44,45 @@ Zeige das Ergebnis als Markdown-Tabelle:
 - Prüfe ob lokaler main Branch mit origin synchron ist
 
 ## 2. Branches aufräumen
-- Liste alle merged Feature Branches (lokal und remote)
-- Frage ob diese gelöscht werden sollen
-- Lösche approved Branches
+
+**Wichtig:** `git branch --merged` und `git merge-base --is-ancestor` sind bei
+Squash-Merge-Policy unbrauchbar — sie melden gemergte Branches als „nicht gemergt".
+Maßgeblich ist die PR-Historie, und dort das Feld `merged_at` (nicht `merged`;
+letzteres ist über MCP-GitHub-Tools unzuverlässig und liefert teils `false`
+auch bei nachweislich gemergten PRs).
+
+```bash
+git fetch --all --prune -q
+for b in $(git branch -r --format='%(refname:short)' \
+           | grep -vE 'origin/(HEAD|main|testing|staging|gh-pages)$'); do
+  br=${b#origin/}
+  pr=$(gh pr list --head "$br" --state merged --json number,mergedAt --limit 1)
+  if [ "$(echo "$pr" | jq 'length')" -gt 0 ]; then
+    echo "✅ $br → PR #$(echo "$pr" | jq -r '.[0].number') gemergt"
+  else
+    echo "⚠️  $br → kein gemergter PR — Inhalt prüfen"
+  fi
+done
+```
+
+Bei `⚠️` zweite Stufe, bevor gelöscht wird — prüft, ob der Branch-Inhalt
+inhaltlich schon im Ziel liegt (z.B. bei umbenanntem Squash-Commit):
+
+```bash
+mb=$(git merge-base origin/testing origin/$br)
+files=$(git diff --name-only $mb origin/$br)
+[ -n "$files" ] && git diff --name-only origin/testing origin/$br -- $files
+# leere Ausgabe = Inhalt vollständig in testing → löschbar
+```
+
+- **Vor dem Löschen fragen**, nur bestätigte Branches löschen
+- `main`, `testing`, `staging`, `gh-pages` **nie** löschen — auch nicht beim Bulk-Delete
+- Schlägt `git push --delete` mit HTTP 403 fehl (Remote-Execution-Umgebungen):
+  Exit-Code ist trotzdem 0 und die letzte Zeile lautet „Everything up-to-date".
+  Nicht als Erfolg werten — stattdessen den fertigen Löschbefehl für die lokale
+  Ausführung ausgeben.
+- Dauerhafte Abhilfe pro Repo: Settings → General → Pull Requests →
+  *Automatically delete head branches*
 
 ## 3. GitHub Actions Status
 - Liste letzte 5 Workflow Runs (Deploy, Tests, etc.)
