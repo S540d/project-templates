@@ -284,4 +284,4 @@ Kopiere diese Datei und verwende sie als Cheat Sheet für Reviews!
 
 ---
 
-**Fragen zur Orientierung?** Siehe [Struktur Konsolidierung im README](README.md#-struktur-konsolidierung-stand-2025-12-26)
+**Fragen zur Orientierung?** Siehe [README](../../README.md) für den Verzeichnisüberblick und [`dev-standards/global-policy.md`](../../dev-standards/global-policy.md) für die verbindlichen Regeln.
