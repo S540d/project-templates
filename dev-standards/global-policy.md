@@ -182,6 +182,36 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
 2. **Erst nach dem ersten erfolgreichen Lauf** den Status-Check ins Ruleset eintragen
    (sonst wartet GitHub auf einen nie laufenden Check).
 
+## Code-Formatierung: Prettier bleibt repo-lokal (Issue #93)
+
+**Entscheidung (2026-08-29): `.prettierrc.json` wird bewusst NICHT vereinheitlicht.**
+
+Jedes aktive Repo hat eine historisch gewachsene, in sich stimmige Prettier-Config
+(Unterschiede v. a. bei `arrowParens`, `trailingComma`, bei safe-my-plants zusätzlich
+`semi: false` und `printWidth: 120`). Diese Unterschiede bleiben bestehen.
+
+**Begründung:** Die üblichen Argumente für eine einheitliche Formatierung greifen bei
+einem Solo-Entwickler nicht — es gibt keine fremden Configs, die in derselben Datei
+kollidieren, und keine Style-Diskussionen im Review. Prettier formatiert beim Speichern
+ohnehin auf die jeweils lokale Config, Copy-Paste zwischen Projekten kostet also nichts.
+Dem stünde ein repoweiter Reformat-Commit pro Projekt gegenüber, der die
+`git blame`-Historie praktisch jeder Zeile überschreibt.
+
+**Konsequenzen:**
+
+- `sync-standards.sh` überschreibt eine vorhandene `.prettierrc.json` **nicht**. Sie wird
+  nur angelegt, wenn im Zielprojekt noch gar keine existiert (dann als Startwert aus
+  `dev-standards/base/.prettierrc.json`).
+- `dev-standards/base/.prettierrc.json` ist damit **Startwert für neue Projekte**, nicht
+  Quelle der Wahrheit für bestehende.
+- Kein projektweiter `prettier --write`-Lauf auf Bestandsrepos. Formatierung ändert sich
+  nur dort, wo ohnehin am Code gearbeitet wird.
+- `.editorconfig` wird weiterhin synchronisiert — es beschreibt Editor-Verhalten
+  (Zeilenenden, Einrückung) und erzeugt keine Reformat-Diffs.
+
+Wenn ein Repo seine Config ändern will, ist das eine lokale Entscheidung dieses Repos
+und braucht keinen Abgleich mit project-templates.
+
 ## Lokaler Cache-Cleanup
 
 Neben dem GitHub-Actions-Cache (`cache-cleanup.yml`, wöchentlich) gibt es einen
