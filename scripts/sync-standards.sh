@@ -4,8 +4,12 @@
 #
 # Synchronisiert:
 #   • Claude Commands  → .claude/commands/   (überschreibt – gewollt, Issue #7)
-#   • .prettierrc.json + .editorconfig → Projekt-Root (Basis)
+#   • .editorconfig    → Projekt-Root (Basis)
 #   • GLOBAL POLICY    → CLAUDE.md   (idempotenter Marker-Block, NIE Überschreiben)
+#
+# NICHT synchronisiert:
+#   • .prettierrc.json – bleibt repo-lokal (Issue #93). Wird nur angelegt, wenn
+#     im Zielprojekt noch keine existiert.
 #
 # CLAUDE.md-Schutz (Issue #7, Entscheidung Maintainer):
 #   Lokale CLAUDE.md darf NICHT überschrieben werden. Nur der Bereich zwischen
@@ -131,10 +135,22 @@ copy_to_project() {
     echo "   • Keine claude-commands/*.md vorhanden – übersprungen"
   fi
 
-  # 2. Basis-Konfig – Prettier + EditorConfig
-  run cp "$ROOT_DIR/dev-standards/base/.prettierrc.json" "$project_dir/.prettierrc.json"
+  # 2. Basis-Konfig – EditorConfig
+  #
+  # .prettierrc.json wird BEWUSST NICHT synchronisiert (Issue #93):
+  # Jedes Repo hat eine historisch gewachsene, in sich stimmige Config. Ein
+  # Überschreiben würde einen repoweiten Reformat-Diff erzeugen, dessen Nutzen
+  # bei einem Solo-Entwickler gegen null geht (kein Merge-Konflikt-Risiko durch
+  # fremde Configs, keine Style-Reviews). Nur angelegt, wenn noch gar keine
+  # Config existiert – dann als sinnvoller Startwert.
+  if [ -f "$project_dir/.prettierrc.json" ]; then
+    echo "   • .prettierrc.json vorhanden – bewusst unangetastet (Issue #93)"
+  else
+    run cp "$ROOT_DIR/dev-standards/base/.prettierrc.json" "$project_dir/.prettierrc.json"
+    echo "   ✓ .prettierrc.json neu angelegt (kein Bestand vorhanden)"
+  fi
   run cp "$ROOT_DIR/dev-standards/base/.editorconfig" "$project_dir/.editorconfig"
-  echo "   ✓ .prettierrc.json + .editorconfig synchronisiert"
+  echo "   ✓ .editorconfig synchronisiert"
 
   # 3. GLOBAL POLICY – idempotenter Marker-Block, CLAUDE.md bleibt sonst unberührt
   sync_policy_block "$project_dir/CLAUDE.md"
@@ -148,13 +164,8 @@ cat <<'NOTE'
 
 ✅ Sync abgeschlossen.
 
-⚠️  Prettier-Baseline (Issue #7, Punkt 5):
-   Der erste Prettier-Lauf erzeugt große Reformat-Diffs. Pro Projekt EINMALIG
-   isoliert committen, NICHT mit Feature-Arbeit mischen:
-
-     npx prettier --write .
-     git add -A && git commit -m "style: prettier baseline (project-templates)"
-     git rev-parse HEAD >> .git-blame-ignore-revs
-     git add .git-blame-ignore-revs && git commit -m "chore: ignore prettier baseline in git blame"
-     git config blame.ignoreRevsFile .git-blame-ignore-revs
+ℹ️  .prettierrc.json wurde in bestehenden Projekten NICHT angefasst (Issue #93).
+   Jedes Repo behält seine eigene, in sich stimmige Formatierung. Kein
+   repoweiter `prettier --write`-Lauf nötig – und ausdrücklich nicht erwünscht,
+   weil er die git-blame-Historie praktisch jeder Zeile überschreiben würde.
 NOTE
