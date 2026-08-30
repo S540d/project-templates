@@ -32,16 +32,20 @@ npm install --save-dev vitest @vitest/ui jsdom
 ## Phase 2: Code Qualität Setup (45 Min)
 
 ### Prettier Konfiguration
-- [ ] `.prettierrc.json` erstellt:
+- [ ] `.prettierrc.json` erstellt — Startwert aus `dev-standards/base/.prettierrc.json`:
 ```json
 {
   "semi": true,
-  "trailingComma": "es5",
   "singleQuote": true,
+  "trailingComma": "es5",
   "printWidth": 100,
-  "tabWidth": 2
+  "tabWidth": 2,
+  "useTabs": false
 }
 ```
+> Gilt für **neue** Projekte. Bestehende Repos behalten ihre eigene Config —
+> `sync-standards.sh` überschreibt sie nicht (Issue #93, siehe `global-policy.md`).
+
 - [ ] `npm run format` funktioniert
 - [ ] Test: Format eine Datei und verify
 

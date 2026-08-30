@@ -77,6 +77,30 @@ Jedes Repo muss in `.gitignore` enthalten:
 - `.claude/commands/` enthält geteilte Slash-Commands, die für alle Entwickler im Repo gelten → versioniert (Issue #31)
 - Maschinenspezifische Artefakte (Settings, Cache, Memory) gehören nicht ins Repo
 
+## Memory vs. CLAUDE.md (Issue #94)
+
+Faustregel, wann eine Erkenntnis in die auto-memory gehört und wann ins
+projekteigene `CLAUDE.md`:
+
+| | **CLAUDE.md** | **Memory** |
+|---|---|---|
+| Inhalt | Bewusst verfasste, stabile Projekt-Doku: Architektur, Konventionen, Deploy-Prozess, Setup | Informelle, aus Konversationen abgeleitete Lektionen/Fallstricke/Entscheidungen |
+| Pflege | Von Hand geschrieben und aktualisiert | Automatisch von Claude während der Arbeit geschrieben |
+| Geltung | Für alle Menschen im Projekt lesbar, versioniert, Teil des Repos | Nur für Claude selbst, sessionübergreifend, gitignored |
+| Lebensdauer | Dauerhaft, solange die Doku stimmt | Kann veralten, wird bei Bedarf korrigiert/gelöscht |
+
+**Hochstufen:** Tritt ein Memory-Fallstrick wiederholt auf (≥ 2× in
+unterschiedlichen Sessions relevant) oder betrifft er eine Struktur-
+entscheidung, die jeder Mitentwickler kennen müsste (z. B. „`docs/private/`
+ist der falsche Ort, echte Doku liegt in `docs/`"), gehört er nach
+`CLAUDE.md` hochgestuft — und der Memory-Eintrag wird danach entfernt
+(kein Duplikat an zwei Orten).
+
+**Beispiel:** Ein einmalig aufgetretener Verwechslungs-Fallstrick
+(„Play-Store-Listing existierte doppelt") bleibt Memory, solange er nicht
+strukturell ist. Eine dauerhafte Konvention („Doku für Menschen liegt in
+`docs/`, nicht in `docs/private/`") gehört in `CLAUDE.md`.
+
 ## PR-Review & Merge-Gate (kostenlos + abo-basiert)
 Die früher metered, pro PR laufende Anthropic-API ist abgelöst. Neues Modell:
 
@@ -157,6 +181,36 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
    - `ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml` (nur Node-Repos)
 2. **Erst nach dem ersten erfolgreichen Lauf** den Status-Check ins Ruleset eintragen
    (sonst wartet GitHub auf einen nie laufenden Check).
+
+## Code-Formatierung: Prettier bleibt repo-lokal (Issue #93)
+
+**Entscheidung (2026-08-29): `.prettierrc.json` wird bewusst NICHT vereinheitlicht.**
+
+Jedes aktive Repo hat eine historisch gewachsene, in sich stimmige Prettier-Config
+(Unterschiede v. a. bei `arrowParens`, `trailingComma`, bei safe-my-plants zusätzlich
+`semi: false` und `printWidth: 120`). Diese Unterschiede bleiben bestehen.
+
+**Begründung:** Die üblichen Argumente für eine einheitliche Formatierung greifen bei
+einem Solo-Entwickler nicht — es gibt keine fremden Configs, die in derselben Datei
+kollidieren, und keine Style-Diskussionen im Review. Prettier formatiert beim Speichern
+ohnehin auf die jeweils lokale Config, Copy-Paste zwischen Projekten kostet also nichts.
+Dem stünde ein repoweiter Reformat-Commit pro Projekt gegenüber, der die
+`git blame`-Historie praktisch jeder Zeile überschreibt.
+
+**Konsequenzen:**
+
+- `sync-standards.sh` überschreibt eine vorhandene `.prettierrc.json` **nicht**. Sie wird
+  nur angelegt, wenn im Zielprojekt noch gar keine existiert (dann als Startwert aus
+  `dev-standards/base/.prettierrc.json`).
+- `dev-standards/base/.prettierrc.json` ist damit **Startwert für neue Projekte**, nicht
+  Quelle der Wahrheit für bestehende.
+- Kein projektweiter `prettier --write`-Lauf auf Bestandsrepos. Formatierung ändert sich
+  nur dort, wo ohnehin am Code gearbeitet wird.
+- `.editorconfig` wird weiterhin synchronisiert — es beschreibt Editor-Verhalten
+  (Zeilenenden, Einrückung) und erzeugt keine Reformat-Diffs.
+
+Wenn ein Repo seine Config ändern will, ist das eine lokale Entscheidung dieses Repos
+und braucht keinen Abgleich mit project-templates.
 
 ## Lokaler Cache-Cleanup
 

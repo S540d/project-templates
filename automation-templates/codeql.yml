@@ -1,50 +1,64 @@
-name: CodeQL
+name: "CodeQL"
 
 # Kostenlose statische Code-Analyse (SAST) via GitHub CodeQL (Issue #60).
 # Ersetzt zusammen mit dependabot.yml den kostenpflichtigen Anthropic-API-Scan.
-# Ergänzt den bestehenden security-scan.yml (Secret-Scan) um Code-Schwachstellen.
 #
-# Kopieren nach .github/workflows/codeql.yml.
+# Wird von scripts/sync-standards.sh nach .github/workflows/codeql.yml kopiert,
+# aber nur wenn dort noch keine Fassung liegt (Issue #109).
 #
-# languages an das Repo anpassen (CodeQL braucht die konkrete Sprache):
-#   - JS/TS-Web/React-Native:  'javascript-typescript'
-#   - reine Doc/Config-Repos:   kein CodeQL nötig — diese Datei weglassen
-# Mehrere Sprachen: als YAML-Liste unter matrix.language ergänzen.
+# build-mode: none — CodeQL analysiert den Quellcode direkt. Autobuild schlägt
+# bei React-Native-/Expo-Projekten fehl und ist für JS/TS unnötig.
+# Die Sprache 'actions' scannt zusätzlich die Workflow-Dateien selbst.
+# Für reine Python-/Arduino-Repos ist diese Vorlage wirkungslos — weglassen.
+#
+# NICHT verwenden, wenn im Repo GitHubs Code-Scanning *Default Setup* aktiv ist
+# (Advanced + Default schliessen sich aus, der Upload schlaegt fehl) oder in
+# privaten Repos ohne GitHub Advanced Security. Pruefen mit:
+#   gh api repos/<slug>/code-scanning/default-setup --jq .state
 
 on:
-  pull_request:
-    branches: [main, testing]
   push:
     branches: [main]
+  pull_request:
+    branches: [main, testing]
   schedule:
-    # Wöchentlicher Full-Scan (fängt neu bekannt gewordene CVEs ohne Code-Änderung).
-    - cron: "23 4 * * 1"
+    # Wöchentlicher Full-Scan: fängt neu bekannt gewordene CVEs ohne Code-Änderung.
+    - cron: '30 5 * * 1'
 
 permissions:
+  actions: read
   contents: read
-  security-events: write   # CodeQL-Findings in den Security-Tab schreiben
+  security-events: write
 
 jobs:
   analyze:
-    name: Analyze
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
     strategy:
       fail-fast: false
       matrix:
-        language: ["javascript-typescript"]
+        include:
+          - language: javascript-typescript
+            build-mode: none
+          - language: actions
+            build-mode: none
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+          build-mode: ${{ matrix.build-mode }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:${{matrix.language}}"
