@@ -99,6 +99,37 @@ files=$(git diff --name-only $mb origin/$br)
 - Zeige kürzlich geschlossene Issues (heute)
 - Weise auf Issues ohne Label hin
 
+### 5a. Erledigte Issues aufspüren (Issue #111)
+`Closes #X` schließt ein Issue nur beim Merge in den **Default-Branch** (`main`).
+Da alle PRs nach `testing` gehen, greift das Keyword faktisch nie — Issues bleiben
+offen, obwohl der Code längst gemergt ist.
+
+Gemergte `testing`-PRs gegen die offenen Issues abgleichen:
+
+```bash
+SLUG=$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##')
+OPEN=$(gh issue list -R "$SLUG" --state open --limit 100 --json number -q '.[].number' | tr '\n' ' ')
+gh pr list -R "$SLUG" --state merged --base testing --limit 60 --json number,body \
+  --jq '.[] | (.body // "") as $b
+        | ($b|[scan("(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+#(\\d+)")]|flatten|unique) as $r
+        | select($r|length>0) | "\(.number) \($r|join(" "))"' |
+while read -r pr refs; do
+  for i in $refs; do
+    case " $OPEN " in *" $i "*) echo "Issue #$i erledigt durch PR #$pr";; esac
+  done
+done
+```
+
+**Nur vorschlagen, nicht automatisch schließen.** Sammel-/Meta-Issues ("Backlog",
+"Maßnahmenkatalog", "Tracking") werden von Teil-PRs oft fälschlich mit `Closes`
+referenziert, sind aber nicht erledigt. Vor dem Schließen den Issue-Titel lesen.
+
+Beim Schließen den Grund vermerken, damit die Historie nachvollziehbar bleibt:
+
+```bash
+gh issue close -R "$SLUG" <N> -c "Umgesetzt in #<PR>, gemergt nach \`testing\`."
+```
+
 ## 6. Dependencies & Security
 - Prüfe ob `package.json` Updates braucht (via npm outdated)
 - Prüfe auf Security Vulnerabilities (npm audit)
