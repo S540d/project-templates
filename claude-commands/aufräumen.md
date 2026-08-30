@@ -81,8 +81,9 @@ files=$(git diff --name-only $mb origin/$br)
   Exit-Code ist trotzdem 0 und die letzte Zeile lautet „Everything up-to-date".
   Nicht als Erfolg werten — stattdessen den fertigen Löschbefehl für die lokale
   Ausführung ausgeben.
-- Dauerhafte Abhilfe pro Repo: Settings → General → Pull Requests →
-  *Automatically delete head branches*
+- Dauerhafte Abhilfe: `scripts/apply-rulesets.sh` setzt `delete_branch_on_merge=true`
+  zentral für alle Repos (siehe `dev-standards/global-policy.md`, „Merge-Methode
+  zentral erzwingen") — kein manuelles Settings-Klicken mehr nötig
 
 ## 3. GitHub Actions Status
 - Liste letzte 5 Workflow Runs (Deploy, Tests, etc.)
