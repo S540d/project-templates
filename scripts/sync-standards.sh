@@ -177,6 +177,16 @@ copy_to_project() {
 
   # CodeQL nur für Repos mit JS/TS-Code – die Vorlage deklariert
   # javascript-typescript; für reine Python-/Arduino-Repos wäre sie wirkungslos.
+  #
+  # ACHTUNG (Issue #109): Der Workflow ist "Advanced Setup". Er schlägt fehl,
+  # wenn im Repo bereits GitHubs Code-Scanning *Default Setup* aktiv ist
+  # ("CodeQL analyses from advanced configurations cannot be processed when
+  # the default setup is enabled") – dann scannt GitHub ohnehin schon, und
+  # die Datei gehört NICHT ins Repo. Ebenso in privaten Repos ohne GitHub
+  # Advanced Security, wo Code Scanning gar nicht verfügbar ist.
+  # Vor dem Ausrollen prüfen:
+  #   gh api repos/<slug>/code-scanning/default-setup --jq .state
+  #   → "configured" oder 403 ⇒ diese Datei weglassen
   if [ -f "$project_dir/package.json" ]; then
     if [ -f "$project_dir/.github/workflows/codeql.yml" ]; then
       echo "   • codeql.yml vorhanden – unangetastet"

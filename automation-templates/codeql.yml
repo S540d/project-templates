@@ -10,6 +10,11 @@ name: "CodeQL"
 # bei React-Native-/Expo-Projekten fehl und ist für JS/TS unnötig.
 # Die Sprache 'actions' scannt zusätzlich die Workflow-Dateien selbst.
 # Für reine Python-/Arduino-Repos ist diese Vorlage wirkungslos — weglassen.
+#
+# NICHT verwenden, wenn im Repo GitHubs Code-Scanning *Default Setup* aktiv ist
+# (Advanced + Default schliessen sich aus, der Upload schlaegt fehl) oder in
+# privaten Repos ohne GitHub Advanced Security. Pruefen mit:
+#   gh api repos/<slug>/code-scanning/default-setup --jq .state
 
 on:
   push:
