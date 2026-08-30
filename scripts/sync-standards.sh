@@ -88,7 +88,7 @@ sync_policy_block() {
 
   if [ "$has_start" -eq 1 ] && [ "$has_end" -eq 1 ]; then
     echo "   ↻ Ersetze GLOBAL-POLICY-Block an Ort und Stelle (Rest unberührt)"
-    [ "$DRY_RUN" -eq 0 ] || return
+    [ "$DRY_RUN" -eq 0 ] || return 0
     local tmp blockfile
     tmp="$(mktemp "${claude_file}.XXXXXX")"
     # Mehrzeiligen Block über eine Datei einspeisen – awk -v verträgt keine
@@ -104,7 +104,7 @@ sync_policy_block() {
     rm -f "$blockfile"
   else
     echo "   + Hänge GLOBAL-POLICY-Block einmalig an (CLAUDE.md sonst unberührt)"
-    [ "$DRY_RUN" -eq 0 ] || return
+    [ "$DRY_RUN" -eq 0 ] || return 0
     local tmp
     tmp="$(mktemp "${claude_file}.XXXXXX")"
     {
@@ -154,6 +154,50 @@ copy_to_project() {
 
   # 3. GLOBAL POLICY – idempotenter Marker-Block, CLAUDE.md bleibt sonst unberührt
   sync_policy_block "$project_dir/CLAUDE.md"
+
+  # 4. Security-Scanning – Dependabot + CodeQL (Issue #109)
+  #
+  # Die Vorlagen lagen seit Issue #60 in automation-templates/, wurden aber nur
+  # "zum Kopieren" bereitgestellt und landeten dadurch in 21 von 23 Repos nie.
+  # Hier NUR anlegen, wenn nichts vorhanden ist – analog zur Prettier-Logik:
+  # bestehende, repo-spezifisch angepasste Fassungen (z. B. paths-ignore für
+  # Daten-Commits) dürfen nicht überschrieben werden.
+  #
+  # Hinweis: dependabot.yml steuert nur Update-PRs. Die Security-*Alerts* sind
+  # ein serverseitiger Repo-Schalter und werden hier NICHT gesetzt:
+  #   gh api -X PUT repos/<slug>/vulnerability-alerts
+  #   gh api -X PUT repos/<slug>/automated-security-fixes
+  if [ -f "$project_dir/.github/dependabot.yml" ]; then
+    echo "   • .github/dependabot.yml vorhanden – unangetastet"
+  else
+    run mkdir -p "$project_dir/.github"
+    run cp "$ROOT_DIR/automation-templates/dependabot.yml" "$project_dir/.github/dependabot.yml"
+    echo "   ✓ .github/dependabot.yml neu angelegt (npm-Block ggf. entfernen)"
+  fi
+
+  # CodeQL nur für Repos mit JS/TS-Code – die Vorlage deklariert
+  # javascript-typescript; für reine Python-/Arduino-Repos wäre sie wirkungslos.
+  #
+  # ACHTUNG (Issue #109): Der Workflow ist "Advanced Setup". Er schlägt fehl,
+  # wenn im Repo bereits GitHubs Code-Scanning *Default Setup* aktiv ist
+  # ("CodeQL analyses from advanced configurations cannot be processed when
+  # the default setup is enabled") – dann scannt GitHub ohnehin schon, und
+  # die Datei gehört NICHT ins Repo. Ebenso in privaten Repos ohne GitHub
+  # Advanced Security, wo Code Scanning gar nicht verfügbar ist.
+  # Vor dem Ausrollen prüfen:
+  #   gh api repos/<slug>/code-scanning/default-setup --jq .state
+  #   → "configured" oder 403 ⇒ diese Datei weglassen
+  if [ -f "$project_dir/package.json" ]; then
+    if [ -f "$project_dir/.github/workflows/codeql.yml" ]; then
+      echo "   • codeql.yml vorhanden – unangetastet"
+    else
+      run mkdir -p "$project_dir/.github/workflows"
+      run cp "$ROOT_DIR/automation-templates/codeql.yml" "$project_dir/.github/workflows/codeql.yml"
+      echo "   ✓ .github/workflows/codeql.yml neu angelegt"
+    fi
+  else
+    echo "   • Kein package.json – CodeQL (javascript-typescript) übersprungen"
+  fi
 }
 
 for project in "${PROJECTS[@]}"; do
