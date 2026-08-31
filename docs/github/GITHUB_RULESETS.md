@@ -43,9 +43,15 @@ Für Web/PWA Projekte (Eisenhauer)
    - ⛔ Verhindert Force Pushes (`git push --force`)
    - Schützt vor versehentlichem Überschreiben der Historie
 
-4. **Bypass Actors**
-   - Repository Admins können Rules bypassen
-   - Nützlich für Hotfixes und Maintenance
+4. **Bypass Actors — bewusst leer**
+   - Kein `RepositoryRole`-Bypass mehr (siehe `dev-standards/global-policy.md` →
+     „Kein Admin-Bypass in `bypass_actors`"). Ein `always`-Admin-Bypass macht die
+     `deletion`-Regel wirkungslos und hat bei EnergyPriceGermany (PR #404) zum
+     versehentlichen Löschen von `testing` geführt (Release-PR `testing → main`
+     mit „Automatically delete head branches" aktiv).
+   - `gh pr merge --admin` funktioniert trotzdem weiter, solange die `pull_request`-
+     Regel `required_approving_review_count: 0` hat — der Flag hebelt dann nichts
+     Aktives mehr aus, ist also risikolos beizubehalten.
 
 ## Installation
 
@@ -145,19 +151,24 @@ git pull --rebase origin main
 git push origin main
 ```
 
-### Bypass für Admins funktioniert nicht
+### Push/Löschen wird trotz Admin-Rechten blockiert
 
-**Problem**: Du bist Admin, kannst aber trotzdem nicht pushen.
-
-**Lösung**:
-1. GitHub UI: Klicke "Merge without waiting for requirements"
-2. CLI: Pushe von einem Branch und merge via PR
+**Das ist gewollt** (seit 2026-08-31, siehe „Bypass Actors — bewusst leer" oben):
+`bypass_actors` ist absichtlich leer, damit `deletion`/`non_fast_forward` auch für
+Admins wirksam bleiben. Kein Workaround über die Rules — stattdessen den eigentlichen
+Weg nehmen:
+1. Force-Push nötig? → `git pull --rebase` + regulärer Push statt `--force`.
+2. Branch löschen nötig? → erst per PR/Review-Prozess klären, ob der Branch wirklich
+   weg soll; ein `deletion`-Ruleset zu bypassen ist kein legitimer Zeitdruck-Workaround.
+3. Tatsächlich mal ein bewusster Bypass nötig? → projektlokal einen befristeten
+   `bypass_actors`-Eintrag setzen, direkt danach wieder auf `[]` zurücksetzen — nicht
+   dauerhaft in der zentralen Vorlage verankern.
 
 ## Best Practices
 
 1. **Status Checks**: Nur kritische Checks als required markieren
 2. **Reviews**: Für Solo-Projects `0`, für Teams `1+`
-3. **Bypass**: Nur für Admins aktivieren
+3. **Bypass**: `bypass_actors: []` — kein dauerhafter Admin-Bypass (Issue: EnergyPriceGermany PR #404)
 4. **Testing**: Teste das Ruleset mit einem Feature Branch
 5. **Updates**: Halte die Required Checks synchron mit deinen Workflows
 

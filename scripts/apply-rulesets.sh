@@ -7,7 +7,10 @@
 #   • PR erforderlich (kein Direct-Push auf main)
 #   • non_fast_forward + deletion → kein Force-Push, kein Löschen von main
 #   • required_approving_review_count: 0 → Solo-Maintainer kann selbst mergen
-#   • Admin-Bypass (RepositoryRole 5) für Notfälle
+#   • bypass_actors: [] – KEIN Admin-Bypass (seit 2026-08-31, s. global-policy.md
+#     "Kein Admin-Bypass in bypass_actors" – ein always-Bypass machte die
+#     deletion-Regel wirkungslos und führte zum ungewollten Löschen von `testing`
+#     bei EnergyPriceGermany PR #404). Nicht wieder hinzufügen.
 #
 # Merge-Methode (Squash-only, siehe global-policy.md "Merge-Methode zentral
 # erzwingen"): Rulesets können die Merge-Methode selbst nicht einschränken —

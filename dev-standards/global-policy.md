@@ -172,6 +172,37 @@ Weitere Rulesets nur bei bewusstem Bedarf:
 - `main`: `pull_request` ohne `dismiss_stale_reviews` + `review_gate` required → kein Merge bei Konflikt
 - `testing`: gleiche required checks, aber kein Approval nötig — bewusst weniger streng (Feature-Branches landen hier zuerst)
 
+### Kein Admin-Bypass in `bypass_actors` (Issue: EnergyPriceGermany PR #404, Audit 2026-08-31)
+
+`bypass_actors` in **allen** Ruleset-Vorlagen (`github-ruleset-protect-main-*.json`) ist
+**leer** (`[]`) — **kein** `RepositoryRole`-Eintrag mit `bypass_mode: "always"` mehr, auch
+nicht für Admins/Owner.
+
+**Warum:** Bei EnergyPriceGermany hat genau dieser Bypass PR #404 den `testing`-Branch
+versehentlich löschen lassen (Release-PR `testing → main` mit „Automatically delete head
+branches" aktiv — der Bypass machte die `deletion`-Regel im Ruleset wirkungslos, weil die
+mergende Admin-Rolle sie ohnehin umgehen durfte). Ein Audit am 2026-08-31 fand dasselbe
+Muster (`actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always"`) identisch in
+**allen** `protect-main`- und `protect-testing`-Rulesets von Eisenhauer, 1x1_Trainer,
+safe-my-plants, Pflanzkalender, CalibrateMyTelescope und project-templates selbst — die
+Lücke kam offenbar direkt aus dieser zentralen Vorlage und wurde beim Rollout auf alle
+Repos übertragen. Am 2026-08-31 in allen sechs Repos sowie in den vier
+`github-ruleset-protect-main-*.json`-Vorlagen behoben (`bypass_actors: []`), verifiziert
+via `git push origin --delete testing` → `GH013: Cannot delete this branch`.
+
+**Konsequenz für den Release-Workflow:** `gh pr merge <nr> --admin` beim `testing → main`-PR
+(Zeile „Merge auf main braucht `--admin`" oben) hebelt jetzt **nichts** mehr aus — die
+`pull_request`-Regel verlangt ohnehin nur `required_approving_review_count: 0`, das war
+nie der Blocker. Der `--admin`-Flag bleibt als Vorsichtsmaßnahme dokumentiert, ist aber
+kein Bypass eines aktiven Schutzes mehr. Falls ein Repo künftig einen echten Admin-Bypass
+braucht (z. B. Hotfix an tot geglaubtem CI), das bewusst und projektlokal entscheiden —
+nicht wieder pauschal in die zentrale Vorlage aufnehmen.
+
+**Verantwortung bei neuen/geänderten Rulesets:** Beim Anlegen oder Ändern eines Rulesets
+mit `deletion`-Regel immer `bypass_actors: []` setzen und mit `current_user_can_bypass`
+in der API-Antwort verifizieren (`"never"` erwartet), nicht nur prüfen, ob die Regel
+`deletion` überhaupt existiert — ein vorhandener `always`-Bypass macht sie wirkungslos.
+
 ### Test-Ebenen (Issue #69)
 
 Tests laufen auf zwei Ebenen. **Leitprinzip:** Was als kostenloser Workflow ohne
