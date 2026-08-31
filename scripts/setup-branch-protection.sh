@@ -84,7 +84,7 @@ if [ "$PROJECT_TYPE" = "react-native" ]; then
   echo "  • (Android builds optional)"
 fi
 echo "  • Block force pushes: yes"
-echo "  • Required approvals: 0 (bypass for admins)"
+echo "  • Required approvals: 0 (no admin bypass — deletion rule applies to everyone)"
 echo ""
 
 read -p "Continue? (y/n) " -n 1 -r
