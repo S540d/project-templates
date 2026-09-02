@@ -117,7 +117,7 @@ Die früher metered, pro PR laufende Anthropic-API ist abgelöst. Neues Modell:
 Du merged manuell, sobald CI grün und `review-gate` grün sind.
 `ANTHROPIC_API_KEY` ist nur noch für den optionalen Fallback nötig (kein Pflicht-Secret).
 
-## Merge-Methode zentral erzwingen (Squash-only)
+## Merge-Methode zentral erzwingen (Squash-Default, Merge-Commit für Sync-/Release-PRs erlaubt)
 
 **Problem (wiederkehrend, u.a. Issue #101):** Die Squash-Merge-Policy stand bisher
 nur als Konvention in diesem Dokument (`gh pr merge <nr> --squash`). Nichts
@@ -126,27 +126,44 @@ GitHub-Web-UI — und genau diese Abweichung bricht Annahmen, auf denen andere
 Tools aufbauen (z.B. die Branch-Erkennung im `aufräumen`-Skill, die bei
 Squash-Merges bewusst auf PR-Historie statt `git branch --merged` ausweicht).
 
-**Lösung:** Die Merge-Methode ist eine Repo-Einstellung, kein Ruleset-Feature
-(GitHub-Rulesets können sie nicht einschränken). `scripts/apply-rulesets.sh`
-setzt sie deshalb zusätzlich zum Ruleset per PATCH auf `repos/{owner}/{repo}`:
+**Zwischenstand (2026-08-31 bis 2026-09-02, überholt):** Als Lösung wurde
+`allow_merge_commit=false` gesetzt — „Create a merge commit" war in der Web-UI
+komplett deaktiviert, nicht nur nicht mehr Default. Das hat aber laufend Probleme
+verursacht: Sync-/Release-PRs (`testing → main`) brauchen einen echten
+Merge-Commit, um die Ancestry zwischen den Branches intakt zu halten, und genau
+diese Möglichkeit war strukturell blockiert. Ein Squash von `testing → main`
+verliert die Merge-Basis und lässt beide Branches aus Git-Sicht divergieren.
+
+**Aktuelle Lösung:** Die Merge-Methode ist eine Repo-Einstellung, kein
+Ruleset-Feature (GitHub-Rulesets können sie nicht einschränken).
+`scripts/apply-rulesets.sh` setzt sie zusätzlich zum Ruleset per PATCH auf
+`repos/{owner}/{repo}` — Squash bleibt Default, Merge-Commit bleibt aber als
+Option wählbar:
 
 ```bash
 gh api repos/S540d/<repo> --method PATCH \
   -f allow_squash_merge=true \
-  -f allow_merge_commit=false \
+  -f allow_merge_commit=true \
   -f allow_rebase_merge=false \
   -f delete_branch_on_merge=true \
   -f squash_merge_commit_title=PR_TITLE \
   -f squash_merge_commit_message=PR_BODY
 ```
 
-- `allow_merge_commit=false`, `allow_rebase_merge=false` → in der Web-UI steht
-  nur noch „Squash and merge" zur Auswahl, ein versehentlicher Nicht-Squash-Merge
-  ist strukturell ausgeschlossen.
+- `allow_squash_merge=true`, `allow_merge_commit=true` → in der Web-UI stehen
+  „Squash and merge" (Default) und „Create a merge commit" zur Auswahl. Für
+  normale Feature-PRs ändert sich nichts — Squash bleibt die naheliegende Wahl.
+  Für Sync-/Release-PRs (`testing → main`) kann bewusst „Create a merge commit"
+  gewählt werden, damit die Ancestry erhalten bleibt.
+- `allow_rebase_merge=false` → Rebase bleibt deaktiviert, da es dieselben
+  Ancestry-Probleme wie ein versehentlicher Merge-Commit erzeugen kann und für
+  keinen der beiden PR-Typen gebraucht wird.
 - `delete_branch_on_merge=true` → ersetzt die bisherige manuelle Empfehlung
   („Settings → General → Automatically delete head branches") durch eine
   zentral erzwungene Einstellung.
 - Gilt für **alle Repos**, unabhängig vom Ruleset-Typ (base/web/react-native).
+- **Nicht wieder auf `allow_merge_commit=false` zurückstellen** — das war die
+  Ursache der wiederkehrenden Release-Workflow-Probleme.
 
 ## Branch Protection (Rulesets)
 `main` und `testing` sind in allen Repos per Ruleset geschützt:
