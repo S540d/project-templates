@@ -12,14 +12,18 @@
 #     deletion-Regel wirkungslos und führte zum ungewollten Löschen von `testing`
 #     bei EnergyPriceGermany PR #404). Nicht wieder hinzufügen.
 #
-# Merge-Methode (Squash-only, siehe global-policy.md "Merge-Methode zentral
-# erzwingen"): Rulesets können die Merge-Methode selbst nicht einschränken —
-# das ist eine separate Repo-Einstellung. Dieses Skript setzt sie deshalb
-# zusätzlich per PATCH auf repos/{owner}/{repo}:
-#   • allow_squash_merge=true, allow_merge_commit=false, allow_rebase_merge=false
-#     → verhindert versehentliche Nicht-Squash-Merges über die Web-UI, die
-#       die Squash-Merge-Policy (und darauf aufbauende Branch-Erkennung,
-#       Issue #101) unterlaufen würden
+# Merge-Methode (Squash-Default, Merge-Commit erlaubt für Sync-/Release-PRs;
+# siehe global-policy.md "Merge-Methode zentral erzwingen"): Rulesets können
+# die Merge-Methode selbst nicht einschränken — das ist eine separate
+# Repo-Einstellung. Dieses Skript setzt sie deshalb zusätzlich per PATCH auf
+# repos/{owner}/{repo}:
+#   • allow_squash_merge=true, allow_merge_commit=true, allow_rebase_merge=false
+#     → Squash bleibt die Standardauswahl in der Web-UI; „Create a merge
+#       commit" bleibt für Sync-/Release-PRs (testing → main) bewusst wählbar,
+#       damit die Ancestry zwischen den Branches erhalten bleibt. Rebase bleibt
+#       deaktiviert (erzeugt dieselben Ancestry-Probleme wie ein versehentlicher
+#       Merge-Commit). Nicht wieder auf allow_merge_commit=false zurückstellen —
+#       das hatte den Release-Workflow (testing → main) strukturell blockiert.
 #   • delete_branch_on_merge=true → ersetzt die bisher manuelle Empfehlung
 #     in aufräumen.md ("Settings → General → Automatically delete head
 #     branches") durch eine zentral erzwungene Einstellung
@@ -113,11 +117,11 @@ for repo in "${REPOS[@]}"; do
     fi
   fi
 
-  echo "  ↻ Merge-Methode auf Squash-only setzen (allow_merge_commit/allow_rebase_merge=false, delete_branch_on_merge=true)"
+  echo "  ↻ Merge-Methode setzen (Squash Default, Merge-Commit für Sync-/Release-PRs erlaubt, Rebase aus, delete_branch_on_merge=true)"
   if [ "$DRY_RUN" -eq 0 ]; then
     if gh api "repos/$OWNER/$repo" --method PATCH \
         -f allow_squash_merge=true \
-        -f allow_merge_commit=false \
+        -f allow_merge_commit=true \
         -f allow_rebase_merge=false \
         -f delete_branch_on_merge=true \
         -f squash_merge_commit_title=PR_TITLE \
@@ -127,7 +131,7 @@ for repo in "${REPOS[@]}"; do
       echo "  ⚠️  Merge-Methode-Update fehlgeschlagen (Berechtigung?)"
     fi
   else
-    echo "  [dry-run] würde allow_squash_merge=true, allow_merge_commit=false, allow_rebase_merge=false, delete_branch_on_merge=true setzen"
+    echo "  [dry-run] würde allow_squash_merge=true, allow_merge_commit=true, allow_rebase_merge=false, delete_branch_on_merge=true setzen"
   fi
 done
 

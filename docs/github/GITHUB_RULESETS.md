@@ -2,9 +2,10 @@
 
 Einheitliche Branch Protection Rules für alle Projekte.
 
-> **Merge-Methode (Squash-only) ist kein Ruleset-Feature.** GitHub-Rulesets
-> können die erlaubte Merge-Methode nicht einschränken — das ist eine separate
-> Repo-Einstellung (`allow_squash_merge`/`allow_merge_commit`/`allow_rebase_merge`/
+> **Merge-Methode (Squash-Default, Merge-Commit für Sync-/Release-PRs erlaubt)
+> ist kein Ruleset-Feature.** GitHub-Rulesets können die erlaubte Merge-Methode
+> nicht einschränken — das ist eine separate Repo-Einstellung
+> (`allow_squash_merge`/`allow_merge_commit`/`allow_rebase_merge`/
 > `delete_branch_on_merge`). `scripts/apply-rulesets.sh` setzt sie zusätzlich zum
 > Ruleset. Details: `dev-standards/global-policy.md`, Abschnitt „Merge-Methode
 > zentral erzwingen".
