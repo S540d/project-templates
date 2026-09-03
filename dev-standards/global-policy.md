@@ -200,20 +200,44 @@ im Repo existiert.
 **Bewusst nicht vereinheitlicht / nicht vorhanden:**
 - Kein `Copilot review`-Ruleset — Copilot-Review wird nicht mehr genutzt (Issue #74)
 
-**Getrennte Rulesets sind Voraussetzung, nicht Lösung** für einen künftigen
-gezielten Automations-Bypass auf `testing` (Korrektur 2 aus Issue #122, Stand
-2026-09-03 noch offen) — `bypass_actors: []` gilt vorerst weiterhin für beide
-Rulesets identisch.
+**Getrennte Rulesets sind Voraussetzung** für einen künftigen gezielten
+Automations-Bypass auf `testing` — `bypass_actors: []` gilt weiterhin als
+Default für beide Rulesets, siehe Policy-Präzisierung im nächsten Abschnitt.
 
 **Schutzgrad main vs. testing:**
 - `main`: `pull_request` ohne `dismiss_stale_reviews` + `review_gate` required → kein Merge bei Konflikt
 - `testing`: gleiche required checks, aber kein Approval nötig — bewusst weniger streng (Feature-Branches landen hier zuerst)
 
-### Kein Admin-Bypass in `bypass_actors` (Issue: EnergyPriceGermany PR #404, Audit 2026-08-31)
+### Bypass-Policy: kein Rollen-Bypass, gezielter Automations-Bypass erlaubt (Issue: EnergyPriceGermany PR #404, Audit 2026-08-31; präzisiert Issue #122 Korrektur 2, 2026-09-03)
 
-`bypass_actors` in **allen** Ruleset-Vorlagen (`github-ruleset-protect-main-*.json`) ist
-**leer** (`[]`) — **kein** `RepositoryRole`-Eintrag mit `bypass_mode: "always"` mehr, auch
-nicht für Admins/Owner.
+`bypass_actors` in **allen** Ruleset-Vorlagen (`github-ruleset-protect-main-*.json`,
+`github-ruleset-protect-testing-*.json`) ist per Default **leer** (`[]`) — **kein**
+`RepositoryRole`-Eintrag mit `bypass_mode: "always"` mehr, auch nicht für Admins/Owner.
+Das bleibt vollständig verboten (Grund siehe unten).
+
+**Präzisierung (Issue #122 Korrektur 2):** Die ursprüngliche Lehre aus #404 lautete
+*kein Admin-Bypass*, wurde in der Vorlage aber zu *kein Bypass überhaupt* verallgemeinert.
+Das traf auch legitime Automation (z. B. `fetch.yml`) und führte zu EnergyPriceGermany
+#446 (13h Datenausfall). Richtig differenziert:
+
+- **Verboten bleibt:** `RepositoryRole`/Personen-Rollen mit `bypass_mode: "always"` —
+  das ist die ursprüngliche, vollständig gültige Lehre aus #404.
+- **Erlaubt und empfohlen:** genau **ein** Automations-Actor pro Branch, sofern er eine
+  *Identität* und keine *Rolle* ist — bevorzugt ein **Deploy Key** (repo-gebunden, kein
+  Personenbezug). Voraussetzung dafür sind die seit Issue #122 getrennten Rulesets pro
+  Branch (siehe oben) — ein gemeinsames Ruleset für main+testing macht `bypass_actors`
+  unteilbar und verbietet damit implizit auch den gezielten Fall.
+- **Hinweis:** `github-actions[bot]` ist in Rulesets grundsätzlich **nicht** als
+  Bypass-Actor wählbar — GitHub lässt das aus Sicherheitsgründen nicht zu. Eine
+  Automation, die auf `testing` schreiben muss, braucht also einen Deploy Key (oder ein
+  PAT einer Machine-Identität), nicht `secrets.GITHUB_TOKEN`.
+- **Merksatz:** Ein Bypass ist nicht nur ein Sicherheitsrisiko, sondern auch eine
+  Abhängigkeit. Vor dem Entfernen prüfen, wer außer Menschen darüber schreibt.
+
+**Umsetzungsstand:** Diese Präzisierung ist die Policy-Entscheidung; die konkrete
+Einrichtung eines Deploy-Key-Bypass in einem Ruleset (z. B. für `fetch.yml` in
+EnergyPriceGermany) ist projektlokal und noch nicht ausgerollt — `bypass_actors: []`
+bleibt bis dahin der Default in allen zentralen Vorlagen.
 
 **Warum:** Bei EnergyPriceGermany hat genau dieser Bypass PR #404 den `testing`-Branch
 versehentlich löschen lassen (Release-PR `testing → main` mit „Automatically delete head
@@ -236,9 +260,12 @@ braucht (z. B. Hotfix an tot geglaubtem CI), das bewusst und projektlokal entsch
 nicht wieder pauschal in die zentrale Vorlage aufnehmen.
 
 **Verantwortung bei neuen/geänderten Rulesets:** Beim Anlegen oder Ändern eines Rulesets
-mit `deletion`-Regel immer `bypass_actors: []` setzen und mit `current_user_can_bypass`
-in der API-Antwort verifizieren (`"never"` erwartet), nicht nur prüfen, ob die Regel
-`deletion` überhaupt existiert — ein vorhandener `always`-Bypass macht sie wirkungslos.
+mit `deletion`-Regel als Default `bypass_actors: []` setzen. Ein einzelner Deploy-Key-Actor
+ist zulässig (siehe Präzisierung oben), ein `RepositoryRole`-Eintrag mit `bypass_mode:
+"always"` nicht. In jedem Fall mit `current_user_can_bypass` in der API-Antwort
+verifizieren (`"never"` erwartet, außer für den bewusst eingerichteten Deploy-Key-Actor),
+nicht nur prüfen, ob die Regel `deletion` überhaupt existiert — ein vorhandener
+`always`-Bypass macht sie wirkungslos.
 
 ### Test-Ebenen (Issue #69)
 
