@@ -171,19 +171,39 @@ gh api repos/S540d/<repo> --method PATCH \
 - Non-fast-forward blockiert
 - Required Status Checks (siehe Tabelle unten)
 
-### Soll-Struktur Rulesets (Issue #74)
+### Soll-Struktur Rulesets (Issue #122, löst Issue #74 ab)
 
-Jedes Repo hat genau **ein** aktives Ruleset `protect-main`, das beide Branches abdeckt.
-Weitere Rulesets nur bei bewusstem Bedarf:
+**Überholt (Issue #74, bis 2026-09-03):** Ein gemeinsames Ruleset `protect-main`
+deckte sowohl `main` als auch `testing` ab (`ref_name.include` beide Branches).
+Das machte `bypass_actors` unteilbar zwischen den Branches — einer Automation
+(z. B. `fetch.yml`) ließ sich auf `testing` kein Push erlauben, ohne denselben
+Bypass auch auf `main` zu öffnen. Genau das war die strukturelle Ursache von
+EnergyPriceGermany #446 (13h Datenausfall, weil `bypass_actors: []` pauschal
+auch den Daten-Push blockierte).
 
-| Ruleset | Branches | Rules | Wer hat es |
+**Aktuell:** Jedes Repo hat **zwei** getrennte Rulesets, je eins pro Branch:
+
+| Ruleset | Branch | Rules | Wer hat es |
 |---|---|---|---|
-| `protect-main` | `main` + `testing` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos** |
+| `protect-main` | `main` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos** |
+| `protect-testing` | `testing` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos mit `testing`-Branch** |
 | `Main` (legacy) | `~DEFAULT_BRANCH` | pull_request approvals=1 + Admin-Bypass | EPG, Eisenhauer, 1x1_Trainer — **deaktiviert** (Issue #74); Approvals werden über protect-main geregelt wenn nötig |
 
+Vorlagen: `github-ruleset-protect-main.json` / `github-ruleset-protect-testing.json`
+(Basis, von `scripts/apply-rulesets.sh` verwendet) sowie die Web-/React-Native-
+Varianten mit `required_status_checks` (`github-ruleset-protect-main-web.json` /
+`-testing-web.json`, `-react-native.json` / `-testing-react-native.json`, von
+`scripts/setup-branch-protection.sh` für neue Projekte verwendet).
+`apply-rulesets.sh` wendet `protect-testing` nur an, wenn der Branch `testing`
+im Repo existiert.
+
 **Bewusst nicht vereinheitlicht / nicht vorhanden:**
-- Kein separates `protect-testing`-Ruleset — `protect-main` deckt `testing` bereits ab
 - Kein `Copilot review`-Ruleset — Copilot-Review wird nicht mehr genutzt (Issue #74)
+
+**Getrennte Rulesets sind Voraussetzung, nicht Lösung** für einen künftigen
+gezielten Automations-Bypass auf `testing` (Korrektur 2 aus Issue #122, Stand
+2026-09-03 noch offen) — `bypass_actors: []` gilt vorerst weiterhin für beide
+Rulesets identisch.
 
 **Schutzgrad main vs. testing:**
 - `main`: `pull_request` ohne `dismiss_stale_reviews` + `review_gate` required → kein Merge bei Konflikt

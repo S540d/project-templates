@@ -1,11 +1,11 @@
 {
-  "name": "protect-main",
+  "name": "protect-testing",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
       "include": [
-        "refs/heads/main"
+        "refs/heads/testing"
       ],
       "exclude": []
     }

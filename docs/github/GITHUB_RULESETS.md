@@ -10,21 +10,44 @@ Einheitliche Branch Protection Rules für alle Projekte.
 > Ruleset. Details: `dev-standards/global-policy.md`, Abschnitt „Merge-Methode
 > zentral erzwingen".
 
+> **Getrennte Rulesets pro Branch (Issue #122, seit 2026-09-03).** Bis dahin
+> deckte ein gemeinsames `protect-main`-Ruleset sowohl `main` als auch `testing`
+> ab. Das machte `bypass_actors` unteilbar zwischen den Branches und war die
+> strukturelle Ursache eines 13h-Datenausfalls bei EnergyPriceGermany (#446):
+> `bypass_actors: []` blockierte dort auch den Push einer Automation auf
+> `testing`, weil sich das nicht branchspezifisch öffnen ließ. Seitdem hat
+> jedes Repo zwei Rulesets — `protect-main` (nur `refs/heads/main`) und
+> `protect-testing` (nur `refs/heads/testing`) — mit identischen Regeln, aber
+> unabhängig konfigurierbaren `bypass_actors`. Details:
+> `dev-standards/global-policy.md`, Abschnitt „Soll-Struktur Rulesets".
+
 ## Verfügbare Rulesets
 
-### 1. `github-ruleset-protect-main-react-native.json`
+### Basis (von `scripts/apply-rulesets.sh` verwendet)
+
+- `github-ruleset-protect-main.json` — nur `refs/heads/main`
+- `github-ruleset-protect-testing.json` — nur `refs/heads/testing`
+
+Rules: `deletion`, `non_fast_forward`, `pull_request` (0 required approvals).
+Kein `required_status_checks` — die konkreten Checks unterscheiden sich je
+CI-Setup und werden projektlokal ergänzt oder über die Web-/React-Native-
+Varianten unten abgedeckt.
+
+### 1. `github-ruleset-protect-main-react-native.json` / `github-ruleset-protect-testing-react-native.json`
 Für React Native Projekte (1x1_Trainer, EnergyPriceGermany, Pflanzkalender, DrawFromMemory)
 
 **Required Status Checks:**
 - `code-quality` - Code Quality & Linting
 - `build-web` - Web Build
+- `review-gate` - Merge-Gate
 
-### 2. `github-ruleset-protect-main-web.json`
+### 2. `github-ruleset-protect-main-web.json` / `github-ruleset-protect-testing-web.json`
 Für Web/PWA Projekte (Eisenhauer)
 
 **Required Status Checks:**
 - `code-quality` - Code Quality & Linting
 - `build-web` - Web Build
+- `review-gate` - Merge-Gate
 
 ## Was die Rulesets schützen
 
@@ -56,34 +79,48 @@ Für Web/PWA Projekte (Eisenhauer)
 
 ## Installation
 
+Am einfachsten über `scripts/apply-rulesets.sh` (bestehende Repos, beide
+Rulesets) bzw. `scripts/setup-branch-protection.sh PROJEKT_NAME [react-native|web]`
+(neue Repos). Manuell:
+
 ### Option 1: Via GitHub CLI (Empfohlen)
 
 ```bash
-# Für React Native Projekt
+# Für React Native Projekt — beide Rulesets anlegen
 cd /path/to/projekt
 gh api repos/S540d/PROJEKT_NAME/rulesets \
   --method POST \
   --input /path/to/project-templates/github-ruleset-protect-main-react-native.json
+gh api repos/S540d/PROJEKT_NAME/rulesets \
+  --method POST \
+  --input /path/to/project-templates/github-ruleset-protect-testing-react-native.json
 
-# Für Web Projekt
+# Für Web Projekt — beide Rulesets anlegen
 gh api repos/S540d/Eisenhauer/rulesets \
   --method POST \
   --input /path/to/project-templates/github-ruleset-protect-main-web.json
+gh api repos/S540d/Eisenhauer/rulesets \
+  --method POST \
+  --input /path/to/project-templates/github-ruleset-protect-testing-web.json
 ```
 
 ### Option 2: Via GitHub Web UI
 
+Zwei separate Rulesets anlegen (nicht eins mit beiden Branches — macht
+`bypass_actors` unteilbar, siehe Hinweis oben):
+
 1. Gehe zu **Settings** → **Rules** → **Rulesets**
 2. Klicke **New ruleset** → **New branch ruleset**
-3. Kopiere die Werte aus der JSON-Datei:
-   - Name: `protect-main`
-   - Target branches: `main`
-   - Rules:
-     - ☑️ Require a pull request before merging (optional: 0 approvals)
-     - ☑️ Require status checks to pass
-       - Add checks: `code-quality`, `build-web`
-     - ☑️ Block force pushes
-   - Bypass list: Repository administrators
+3. Für `main`: Name `protect-main`, Target branch `main`
+4. Für `testing`: Name `protect-testing`, Target branch `testing`
+5. Rules (identisch für beide):
+   - ☑️ Require a pull request before merging (optional: 0 approvals)
+   - ☑️ Require status checks to pass
+     - Add checks: `code-quality`, `build-web`
+   - ☑️ Block force pushes
+   - ☑️ Restrict deletions
+   - Bypass list: **leer lassen** — kein `always`-Admin-Bypass (siehe
+     „Bypass Actors — bewusst leer" oben; Ursache von EnergyPriceGermany #404)
 
 ## Anpassungen
 
@@ -103,16 +140,20 @@ Füge zu `required_status_checks` hinzu:
 }
 ```
 
-### Wenn du auch den `develop` Branch schützen möchtest:
+### Wenn du einen weiteren Branch (z.B. `develop`) schützen möchtest:
 
-Kopiere das Ruleset und ändere:
+**Nicht** den bestehenden `ref_name.include` um den weiteren Branch ergänzen
+— das koppelt `bypass_actors` zwischen den Branches (Ursache von
+EnergyPriceGermany #446, siehe Hinweis oben). Stattdessen ein **eigenes**
+Ruleset mit eigenem Namen anlegen:
+
 ```json
-"conditions": {
-  "ref_name": {
-    "include": [
-      "refs/heads/main",
-      "refs/heads/develop"
-    ]
+{
+  "name": "protect-develop",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/develop"]
+    }
   }
 }
 ```
