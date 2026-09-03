@@ -41,9 +41,15 @@
 #       deaktiviert (erzeugt dieselben Ancestry-Probleme wie ein versehentlicher
 #       Merge-Commit). Nicht wieder auf allow_merge_commit=false zurückstellen —
 #       das hatte den Release-Workflow (testing → main) strukturell blockiert.
-#   • delete_branch_on_merge=true → ersetzt die bisher manuelle Empfehlung
-#     in aufräumen.md ("Settings → General → Automatically delete head
-#     branches") durch eine zentral erzwungene Einstellung
+#   • delete_branch_on_merge=false (Korrektur 4, Issue #122, seit 2026-09-03 —
+#     zuvor true) → Auto-Delete löscht nach jedem Merge den Head-Branch,
+#     unabhängig davon welcher das ist. Bei einem Release-PR testing → main
+#     ist der Head-Branch testing selbst — Auto-Delete hat ihn wiederholt
+#     gelöscht (EnergyPriceGermany PR #404, #421, #424, #427). Alle Repos in
+#     dieser Liste haben einen langlebigen testing-Branch, der in dieses
+#     Muster fällt. Feature-Branches weiterhin explizit per
+#     `gh pr merge --delete-branch` löschen (s. global-policy.md
+#     Branch-Strategie) — die Automatik war dafür nie notwendig.
 #
 # Sicherheit (Issue #7):
 #   • --dry-run zeigt nur, was passieren würde
@@ -147,13 +153,13 @@ for repo in "${REPOS[@]}"; do
     echo "  ⏭  kein testing-Branch — protect-testing übersprungen"
   fi
 
-  echo "  ↻ Merge-Methode setzen (Squash Default, Merge-Commit für Sync-/Release-PRs erlaubt, Rebase aus, delete_branch_on_merge=true)"
+  echo "  ↻ Merge-Methode setzen (Squash Default, Merge-Commit für Sync-/Release-PRs erlaubt, Rebase aus, delete_branch_on_merge=false)"
   if [ "$DRY_RUN" -eq 0 ]; then
     if gh api "repos/$OWNER/$repo" --method PATCH \
         -f allow_squash_merge=true \
         -f allow_merge_commit=true \
         -f allow_rebase_merge=false \
-        -f delete_branch_on_merge=true \
+        -f delete_branch_on_merge=false \
         -f squash_merge_commit_title=PR_TITLE \
         -f squash_merge_commit_message=PR_BODY >/dev/null 2>&1; then
       echo "  ✅ Merge-Methode gesetzt"
@@ -161,7 +167,7 @@ for repo in "${REPOS[@]}"; do
       echo "  ⚠️  Merge-Methode-Update fehlgeschlagen (Berechtigung?)"
     fi
   else
-    echo "  [dry-run] würde allow_squash_merge=true, allow_merge_commit=true, allow_rebase_merge=false, delete_branch_on_merge=true setzen"
+    echo "  [dry-run] würde allow_squash_merge=true, allow_merge_commit=true, allow_rebase_merge=false, delete_branch_on_merge=false setzen"
   fi
 done
 

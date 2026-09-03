@@ -145,7 +145,7 @@ gh api repos/S540d/<repo> --method PATCH \
   -f allow_squash_merge=true \
   -f allow_merge_commit=true \
   -f allow_rebase_merge=false \
-  -f delete_branch_on_merge=true \
+  -f delete_branch_on_merge=false \
   -f squash_merge_commit_title=PR_TITLE \
   -f squash_merge_commit_message=PR_BODY
 ```
@@ -158,10 +158,21 @@ gh api repos/S540d/<repo> --method PATCH \
 - `allow_rebase_merge=false` → Rebase bleibt deaktiviert, da es dieselben
   Ancestry-Probleme wie ein versehentlicher Merge-Commit erzeugen kann und für
   keinen der beiden PR-Typen gebraucht wird.
-- `delete_branch_on_merge=true` → ersetzt die bisherige manuelle Empfehlung
-  („Settings → General → Automatically delete head branches") durch eine
-  zentral erzwungene Einstellung.
+- `delete_branch_on_merge=false` (seit Issue #122 Korrektur 4, 2026-09-03;
+  **zuvor `true`**) → GitHubs Auto-Delete löscht den Head-Branch nach **jedem**
+  Merge, unabhängig davon, welcher Branch das ist. Bei einem Release-PR
+  `testing → main` ist der Head-Branch `testing` selbst — Auto-Delete hat ihn
+  wiederholt live gelöscht (EnergyPriceGermany PR #404, #421, #424, #427). Alle
+  7 Repos in `apply-rulesets.sh` sowie `project-templates` selbst haben einen
+  langlebigen `testing`-Branch, der genau in dieses Muster fällt — es gibt in
+  diesem Set keinen Fall, der von `true` profitiert, ohne das Risiko zu tragen.
+  Feature-Branches werden davon unabhängig **explizit** per
+  `gh pr merge --delete-branch` gelöscht (s. Branch-Strategie oben) — die
+  Automatik war dafür nie notwendig, nur bequem.
 - Gilt für **alle Repos**, unabhängig vom Ruleset-Typ (base/web/react-native).
+  Ein Repo **ohne** langlebigen `testing`-Branch (reine Feature→main-Struktur)
+  kann `delete_branch_on_merge=true` projektlokal setzen — das ist dann kein
+  Risiko, weil kein Release-PR einen schützenswerten Branch als Head hat.
 - **Nicht wieder auf `allow_merge_commit=false` zurückstellen** — das war die
   Ursache der wiederkehrenden Release-Workflow-Probleme.
 
