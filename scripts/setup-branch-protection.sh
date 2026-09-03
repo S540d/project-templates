@@ -54,15 +54,22 @@ if [ -z "$PROJECT_TYPE" ]; then
   fi
 fi
 
-# Select ruleset file
+# Select ruleset files (main + testing, getrennt seit Issue #122 — ein
+# gemeinsames Ruleset macht bypass_actors unteilbar zwischen den Branches)
 if [ "$PROJECT_TYPE" = "react-native" ]; then
-  RULESET_FILE="$TEMPLATES_DIR/github-ruleset-protect-main-react-native.json"
+  MAIN_RULESET_FILE="$TEMPLATES_DIR/github-ruleset-protect-main-react-native.json"
+  TESTING_RULESET_FILE="$TEMPLATES_DIR/github-ruleset-protect-testing-react-native.json"
 else
-  RULESET_FILE="$TEMPLATES_DIR/github-ruleset-protect-main-web.json"
+  MAIN_RULESET_FILE="$TEMPLATES_DIR/github-ruleset-protect-main-web.json"
+  TESTING_RULESET_FILE="$TEMPLATES_DIR/github-ruleset-protect-testing-web.json"
 fi
 
-if [ ! -f "$RULESET_FILE" ]; then
-  echo -e "${RED}❌ ERROR: Ruleset file not found: $RULESET_FILE${NC}"
+if [ ! -f "$MAIN_RULESET_FILE" ]; then
+  echo -e "${RED}❌ ERROR: Ruleset file not found: $MAIN_RULESET_FILE${NC}"
+  exit 1
+fi
+if [ ! -f "$TESTING_RULESET_FILE" ]; then
+  echo -e "${RED}❌ ERROR: Ruleset file not found: $TESTING_RULESET_FILE${NC}"
   exit 1
 fi
 
@@ -73,12 +80,12 @@ echo "=========================================="
 echo ""
 echo "Repository: S540d/$PROJECT_NAME"
 echo "Project Type: $PROJECT_TYPE"
-echo "Ruleset File: $(basename $RULESET_FILE)"
+echo "Ruleset Files: $(basename "$MAIN_RULESET_FILE"), $(basename "$TESTING_RULESET_FILE")"
 echo ""
 
 # Show what will be protected
 echo -e "${YELLOW}📋 Rules to be applied:${NC}"
-echo "  • Branch: main"
+echo "  • Branches: main, testing (getrennte Rulesets)"
 echo "  • Required checks: code-quality, build-web"
 if [ "$PROJECT_TYPE" = "react-native" ]; then
   echo "  • (Android builds optional)"
@@ -95,29 +102,34 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo -e "${BLUE}🚀 Creating ruleset...${NC}"
+echo -e "${BLUE}🚀 Creating rulesets...${NC}"
 
-# Create the ruleset
-RESPONSE=$(gh api repos/S540d/$PROJECT_NAME/rulesets \
-  --method POST \
-  --input "$RULESET_FILE" 2>&1) || {
-  echo -e "${RED}❌ ERROR: Failed to create ruleset${NC}"
-  echo "$RESPONSE"
+create_ruleset() {
+  local ruleset_file="$1"
+  local response
+  response=$(gh api repos/S540d/$PROJECT_NAME/rulesets \
+    --method POST \
+    --input "$ruleset_file" 2>&1) || {
+    echo -e "${RED}❌ ERROR: Failed to create ruleset from $(basename "$ruleset_file")${NC}"
+    echo "$response"
 
-  # Check if ruleset already exists
-  if echo "$RESPONSE" | grep -q "already exists"; then
-    echo ""
-    echo -e "${YELLOW}⚠️  A ruleset with this name already exists${NC}"
-    echo ""
-    echo "Options:"
-    echo "1. Delete the existing ruleset via GitHub UI:"
-    echo "   https://github.com/S540d/$PROJECT_NAME/settings/rules"
-    echo "2. Or update it manually with the new rules"
+    if echo "$response" | grep -q "already exists"; then
+      echo ""
+      echo -e "${YELLOW}⚠️  A ruleset with this name already exists${NC}"
+      echo ""
+      echo "Options:"
+      echo "1. Delete the existing ruleset via GitHub UI:"
+      echo "   https://github.com/S540d/$PROJECT_NAME/settings/rules"
+      echo "2. Or update it manually with the new rules"
+      exit 1
+    fi
+
     exit 1
-  fi
-
-  exit 1
+  }
 }
+
+create_ruleset "$MAIN_RULESET_FILE"
+create_ruleset "$TESTING_RULESET_FILE"
 
 echo -e "${GREEN}✅ Branch protection rules created successfully!${NC}"
 echo ""
