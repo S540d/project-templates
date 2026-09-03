@@ -12,17 +12,22 @@
 #   main mitzuöffnen. Genau das war die strukturelle Ursache von
 #   EnergyPriceGermany #446 (13h Datenausfall, weil bypass_actors:[] pauschal
 #   auch den Daten-Push blockierte). Getrennte Rulesets erlauben künftig einen
-#   Automations-Bypass gezielt nur auf testing (Korrektur 2, noch offen).
+#   Automations-Bypass gezielt nur auf testing (Korrektur 2, s. global-policy.md
+#   "Bypass-Policy: kein Rollen-Bypass, gezielter Automations-Bypass erlaubt" –
+#   Policy präzisiert 2026-09-03, konkreter Deploy-Key-Bypass hier noch nicht
+#   ausgerollt).
 #
 # Basis-Regel, Open-Source mit Vandalismusschutz (Issue #7, Maintainer-
 # Entscheidung):
 #   • PR erforderlich (kein Direct-Push auf main/testing)
 #   • non_fast_forward + deletion → kein Force-Push, kein Löschen
 #   • required_approving_review_count: 0 → Solo-Maintainer kann selbst mergen
-#   • bypass_actors: [] – KEIN Admin-Bypass (seit 2026-08-31, s. global-policy.md
-#     "Kein Admin-Bypass in bypass_actors" – ein always-Bypass machte die
-#     deletion-Regel wirkungslos und führte zum ungewollten Löschen von `testing`
-#     bei EnergyPriceGermany PR #404). Nicht wieder hinzufügen.
+#   • bypass_actors: [] – KEIN Rollen-Bypass (`RepositoryRole` mit
+#     `bypass_mode: "always"`, seit 2026-08-31, s. global-policy.md "Bypass-
+#     Policy" – ein always-Bypass machte die deletion-Regel wirkungslos und
+#     führte zum ungewollten Löschen von `testing` bei EnergyPriceGermany PR
+#     #404). Ein einzelner Deploy-Key-Actor pro Branch ist zulässig (Korrektur
+#     2), aber projektlokal einzurichten, nicht in dieser zentralen Vorlage.
 #
 # Merge-Methode (Squash-Default, Merge-Commit erlaubt für Sync-/Release-PRs;
 # siehe global-policy.md "Merge-Methode zentral erzwingen"): Rulesets können
