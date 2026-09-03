@@ -81,9 +81,11 @@ files=$(git diff --name-only $mb origin/$br)
   Exit-Code ist trotzdem 0 und die letzte Zeile lautet „Everything up-to-date".
   Nicht als Erfolg werten — stattdessen den fertigen Löschbefehl für die lokale
   Ausführung ausgeben.
-- Dauerhafte Abhilfe: `scripts/apply-rulesets.sh` setzt `delete_branch_on_merge=true`
-  zentral für alle Repos (siehe `dev-standards/global-policy.md`, „Merge-Methode
-  zentral erzwingen") — kein manuelles Settings-Klicken mehr nötig
+- Feature-Branches nach Merge löschen: `gh pr merge --delete-branch` explizit
+  verwenden. `scripts/apply-rulesets.sh` setzt `delete_branch_on_merge=false`
+  zentral (seit Issue #122 Korrektur 4, siehe `dev-standards/global-policy.md`,
+  „Merge-Methode zentral erzwingen") — GitHubs Auto-Delete löscht sonst auch
+  den Head-Branch von Release-PRs (`testing → main`), also `testing` selbst
 
 ## 3. GitHub Actions Status
 - Liste letzte 5 Workflow Runs (Deploy, Tests, etc.)
