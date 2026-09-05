@@ -1,0 +1,46 @@
+name: Reusable Actionlint
+
+# Lintet alle Workflow-Dateien inkl. eingebetteter shell: run:-Blöcke (Issue #122).
+# actionlint bringt shellcheck für run:-Blöcke mit — genau das hätte den
+# EPG-Vorfall #445 gefangen (ein Apostroph im Fehlertext schloss die Shell-Quotes,
+# node bekam --  als Option, Exit 9 in jedem Run, unbemerkt über Stunden).
+# Aufruf versioniert (@v2):
+#
+#   jobs:
+#     actionlint:
+#       uses: S540d/project-templates/.github/workflows/reusable-actionlint.yml@v2
+
+on:
+  workflow_call:
+    inputs:
+      fail_on_findings:
+        description: 'Bei Funden hart fehlschlagen'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest
+
+          if ./actionlint -color; then
+            echo "actionlint: keine Funde."
+          elif [ "${{ inputs.fail_on_findings }}" = "true" ]; then
+            echo "actionlint: Funde vorhanden, Job schlägt fehl."
+            exit 1
+          else
+            echo "actionlint: Funde vorhanden, aber fail_on_findings=false."
+          fi

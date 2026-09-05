@@ -294,6 +294,7 @@ umgehbar. Alles Weitere läuft **lokal „in der Regel"** (Komfort, kein Gate).
 | `security-scan / security-scan` | Hardcoded Keys/Tokens + getrackte Secrets | nein | **alle Repos** |
 | `gitignore-audit / gitignore-audit` | `.gitignore`-Pflichteinträge + keine Secrets getrackt | nein | **alle Repos** |
 | `🔍 Code Quality & Linting` (EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender, CD-to-Spotify, epic_Calendar) oder `lint-and-typecheck` (safe-my-plants) | lint + type-check + test | **ja** | **nur Node-Repos** (Ausnahme: project-templates) |
+| `actionlint / actionlint` (`reusable-actionlint.yml`, eingehängt in `reusable-ci-quality.yml`) | Workflow-Dateien inkl. `run:`-Blöcken (shellcheck) | nein | **alle Repos mit `ci-cd-{web,react-native}.yml`** |
 
 > **Begründete Abweichung:** Der Quality-Check braucht `package.json`/Lockfile.
 > In reinen Doku-/Template-Repos (project-templates) würde `npm ci` immer scheitern
@@ -318,6 +319,36 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
    - `ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml` (nur Node-Repos)
 2. **Erst nach dem ersten erfolgreichen Lauf** den Status-Check ins Ruleset eintragen
    (sonst wartet GitHub auf einen nie laufenden Check).
+
+### Actionlint (Issue #122, Lehre aus EnergyPriceGermany #445)
+
+`reusable-actionlint.yml` lintet alle Workflow-Dateien eines Repos, inklusive
+eingebetteter `shell: run:`-Blöcke (via `shellcheck`, das actionlint mitbringt).
+Er ist als eigener Job in `reusable-ci-quality.yml` eingehängt (`run_actionlint`,
+Default `true`) — Repos, die den bestehenden `ci-cd-{web,react-native}.yml`-Aufruf
+nutzen, erben ihn automatisch, ohne einen zusätzlichen Caller anzulegen.
+
+**Warum:** EnergyPriceGermany #445 blieb stundenlang unentdeckt, weil ein Apostroph
+in einem deutschen Fehlertext (innerhalb eines mehrzeiligen `node -e '…'`-Inline-Blocks)
+die Shell-Quotes vorzeitig schloss — `node` bekam `--` als Argument, Exit 9 in jedem
+Lauf, aber ohne dass ein Linter je hingesehen hätte. `actionlint`/`shellcheck` hätte
+genau das gefunden.
+
+**Zwei begleitende Konventionen (aus demselben Vorfall):**
+- **Logik gehört in `scripts/`, nicht in Workflow-Inline-Blöcke.** Mehrzeilige
+  `node -e '…'`- oder vergleichbare Inline-Skripte mit natürlichsprachigem Text sind
+  eine eigene Fehlerklasse, keine Stilfrage — sie entziehen sich jedem Editor-Linting.
+- **Alarm-Trennung: Datenlücke ≠ Workflow-Fehler.** Ein roter Run bedeutet „der Workflow
+  ist technisch defekt". Fachliche Befunde (z. B. „keine neuen Daten seit X Stunden")
+  gehören in ein Issue, nicht in den Exit-Code eines Jobs — sonst wird Rot mehrdeutig,
+  und ein echter technischer Defekt versteckt sich hinter einem bereits bekannten
+  fachlichen Alarm.
+
+**Rollout-Falle:** Reusable Workflows werden versioniert per `@v2` eingebunden — eine
+Änderung an `reusable-ci-quality.yml` wirkt in den konsumierenden Repos erst, wenn der
+`v2`-Tag verschoben wird. Nach dem Merge dieser Änderung: `v2`-Tag aktualisieren, dann
+`apply-rulesets.sh --dry-run` und einen echten PR je Repo abwarten, um zu bestätigen,
+dass der `actionlint`-Job tatsächlich läuft.
 
 ## Code-Formatierung: Prettier bleibt repo-lokal (Issue #93)
 
