@@ -117,7 +117,7 @@ Die früher metered, pro PR laufende Anthropic-API ist abgelöst. Neues Modell:
 Du merged manuell, sobald CI grün und `review-gate` grün sind.
 `ANTHROPIC_API_KEY` ist nur noch für den optionalen Fallback nötig (kein Pflicht-Secret).
 
-## Merge-Methode zentral erzwingen (Squash-only)
+## Merge-Methode zentral erzwingen (Squash-Default, Merge-Commit für Sync-/Release-PRs erlaubt)
 
 **Problem (wiederkehrend, u.a. Issue #101):** Die Squash-Merge-Policy stand bisher
 nur als Konvention in diesem Dokument (`gh pr merge <nr> --squash`). Nichts
@@ -126,27 +126,55 @@ GitHub-Web-UI — und genau diese Abweichung bricht Annahmen, auf denen andere
 Tools aufbauen (z.B. die Branch-Erkennung im `aufräumen`-Skill, die bei
 Squash-Merges bewusst auf PR-Historie statt `git branch --merged` ausweicht).
 
-**Lösung:** Die Merge-Methode ist eine Repo-Einstellung, kein Ruleset-Feature
-(GitHub-Rulesets können sie nicht einschränken). `scripts/apply-rulesets.sh`
-setzt sie deshalb zusätzlich zum Ruleset per PATCH auf `repos/{owner}/{repo}`:
+**Zwischenstand (2026-08-31 bis 2026-09-02, überholt):** Als Lösung wurde
+`allow_merge_commit=false` gesetzt — „Create a merge commit" war in der Web-UI
+komplett deaktiviert, nicht nur nicht mehr Default. Das hat aber laufend Probleme
+verursacht: Sync-/Release-PRs (`testing → main`) brauchen einen echten
+Merge-Commit, um die Ancestry zwischen den Branches intakt zu halten, und genau
+diese Möglichkeit war strukturell blockiert. Ein Squash von `testing → main`
+verliert die Merge-Basis und lässt beide Branches aus Git-Sicht divergieren.
+
+**Aktuelle Lösung:** Die Merge-Methode ist eine Repo-Einstellung, kein
+Ruleset-Feature (GitHub-Rulesets können sie nicht einschränken).
+`scripts/apply-rulesets.sh` setzt sie zusätzlich zum Ruleset per PATCH auf
+`repos/{owner}/{repo}` — Squash bleibt Default, Merge-Commit bleibt aber als
+Option wählbar:
 
 ```bash
 gh api repos/S540d/<repo> --method PATCH \
   -f allow_squash_merge=true \
-  -f allow_merge_commit=false \
+  -f allow_merge_commit=true \
   -f allow_rebase_merge=false \
-  -f delete_branch_on_merge=true \
+  -f delete_branch_on_merge=false \
   -f squash_merge_commit_title=PR_TITLE \
   -f squash_merge_commit_message=PR_BODY
 ```
 
-- `allow_merge_commit=false`, `allow_rebase_merge=false` → in der Web-UI steht
-  nur noch „Squash and merge" zur Auswahl, ein versehentlicher Nicht-Squash-Merge
-  ist strukturell ausgeschlossen.
-- `delete_branch_on_merge=true` → ersetzt die bisherige manuelle Empfehlung
-  („Settings → General → Automatically delete head branches") durch eine
-  zentral erzwungene Einstellung.
+- `allow_squash_merge=true`, `allow_merge_commit=true` → in der Web-UI stehen
+  „Squash and merge" (Default) und „Create a merge commit" zur Auswahl. Für
+  normale Feature-PRs ändert sich nichts — Squash bleibt die naheliegende Wahl.
+  Für Sync-/Release-PRs (`testing → main`) kann bewusst „Create a merge commit"
+  gewählt werden, damit die Ancestry erhalten bleibt.
+- `allow_rebase_merge=false` → Rebase bleibt deaktiviert, da es dieselben
+  Ancestry-Probleme wie ein versehentlicher Merge-Commit erzeugen kann und für
+  keinen der beiden PR-Typen gebraucht wird.
+- `delete_branch_on_merge=false` (seit Issue #122 Korrektur 4, 2026-09-03;
+  **zuvor `true`**) → GitHubs Auto-Delete löscht den Head-Branch nach **jedem**
+  Merge, unabhängig davon, welcher Branch das ist. Bei einem Release-PR
+  `testing → main` ist der Head-Branch `testing` selbst — Auto-Delete hat ihn
+  wiederholt live gelöscht (EnergyPriceGermany PR #404, #421, #424, #427). Alle
+  7 Repos in `apply-rulesets.sh` sowie `project-templates` selbst haben einen
+  langlebigen `testing`-Branch, der genau in dieses Muster fällt — es gibt in
+  diesem Set keinen Fall, der von `true` profitiert, ohne das Risiko zu tragen.
+  Feature-Branches werden davon unabhängig **explizit** per
+  `gh pr merge --delete-branch` gelöscht (s. Branch-Strategie oben) — die
+  Automatik war dafür nie notwendig, nur bequem.
 - Gilt für **alle Repos**, unabhängig vom Ruleset-Typ (base/web/react-native).
+  Ein Repo **ohne** langlebigen `testing`-Branch (reine Feature→main-Struktur)
+  kann `delete_branch_on_merge=true` projektlokal setzen — das ist dann kein
+  Risiko, weil kein Release-PR einen schützenswerten Branch als Head hat.
+- **Nicht wieder auf `allow_merge_commit=false` zurückstellen** — das war die
+  Ursache der wiederkehrenden Release-Workflow-Probleme.
 
 ## Branch Protection (Rulesets)
 `main` und `testing` sind in allen Repos per Ruleset geschützt:
@@ -154,29 +182,73 @@ gh api repos/S540d/<repo> --method PATCH \
 - Non-fast-forward blockiert
 - Required Status Checks (siehe Tabelle unten)
 
-### Soll-Struktur Rulesets (Issue #74)
+### Soll-Struktur Rulesets (Issue #122, löst Issue #74 ab)
 
-Jedes Repo hat genau **ein** aktives Ruleset `protect-main`, das beide Branches abdeckt.
-Weitere Rulesets nur bei bewusstem Bedarf:
+**Überholt (Issue #74, bis 2026-09-03):** Ein gemeinsames Ruleset `protect-main`
+deckte sowohl `main` als auch `testing` ab (`ref_name.include` beide Branches).
+Das machte `bypass_actors` unteilbar zwischen den Branches — einer Automation
+(z. B. `fetch.yml`) ließ sich auf `testing` kein Push erlauben, ohne denselben
+Bypass auch auf `main` zu öffnen. Genau das war die strukturelle Ursache von
+EnergyPriceGermany #446 (13h Datenausfall, weil `bypass_actors: []` pauschal
+auch den Daten-Push blockierte).
 
-| Ruleset | Branches | Rules | Wer hat es |
+**Aktuell:** Jedes Repo hat **zwei** getrennte Rulesets, je eins pro Branch:
+
+| Ruleset | Branch | Rules | Wer hat es |
 |---|---|---|---|
-| `protect-main` | `main` + `testing` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos** |
+| `protect-main` | `main` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos** |
+| `protect-testing` | `testing` | deletion, non_fast_forward, pull_request, required_status_checks | **alle Repos mit `testing`-Branch** |
 | `Main` (legacy) | `~DEFAULT_BRANCH` | pull_request approvals=1 + Admin-Bypass | EPG, Eisenhauer, 1x1_Trainer — **deaktiviert** (Issue #74); Approvals werden über protect-main geregelt wenn nötig |
 
+Vorlagen: `github-ruleset-protect-main.json` / `github-ruleset-protect-testing.json`
+(Basis, von `scripts/apply-rulesets.sh` verwendet) sowie die Web-/React-Native-
+Varianten mit `required_status_checks` (`github-ruleset-protect-main-web.json` /
+`-testing-web.json`, `-react-native.json` / `-testing-react-native.json`, von
+`scripts/setup-branch-protection.sh` für neue Projekte verwendet).
+`apply-rulesets.sh` wendet `protect-testing` nur an, wenn der Branch `testing`
+im Repo existiert.
+
 **Bewusst nicht vereinheitlicht / nicht vorhanden:**
-- Kein separates `protect-testing`-Ruleset — `protect-main` deckt `testing` bereits ab
 - Kein `Copilot review`-Ruleset — Copilot-Review wird nicht mehr genutzt (Issue #74)
+
+**Getrennte Rulesets sind Voraussetzung** für einen künftigen gezielten
+Automations-Bypass auf `testing` — `bypass_actors: []` gilt weiterhin als
+Default für beide Rulesets, siehe Policy-Präzisierung im nächsten Abschnitt.
 
 **Schutzgrad main vs. testing:**
 - `main`: `pull_request` ohne `dismiss_stale_reviews` + `review_gate` required → kein Merge bei Konflikt
 - `testing`: gleiche required checks, aber kein Approval nötig — bewusst weniger streng (Feature-Branches landen hier zuerst)
 
-### Kein Admin-Bypass in `bypass_actors` (Issue: EnergyPriceGermany PR #404, Audit 2026-08-31)
+### Bypass-Policy: kein Rollen-Bypass, gezielter Automations-Bypass erlaubt (Issue: EnergyPriceGermany PR #404, Audit 2026-08-31; präzisiert Issue #122 Korrektur 2, 2026-09-03)
 
-`bypass_actors` in **allen** Ruleset-Vorlagen (`github-ruleset-protect-main-*.json`) ist
-**leer** (`[]`) — **kein** `RepositoryRole`-Eintrag mit `bypass_mode: "always"` mehr, auch
-nicht für Admins/Owner.
+`bypass_actors` in **allen** Ruleset-Vorlagen (`github-ruleset-protect-main-*.json`,
+`github-ruleset-protect-testing-*.json`) ist per Default **leer** (`[]`) — **kein**
+`RepositoryRole`-Eintrag mit `bypass_mode: "always"` mehr, auch nicht für Admins/Owner.
+Das bleibt vollständig verboten (Grund siehe unten).
+
+**Präzisierung (Issue #122 Korrektur 2):** Die ursprüngliche Lehre aus #404 lautete
+*kein Admin-Bypass*, wurde in der Vorlage aber zu *kein Bypass überhaupt* verallgemeinert.
+Das traf auch legitime Automation (z. B. `fetch.yml`) und führte zu EnergyPriceGermany
+#446 (13h Datenausfall). Richtig differenziert:
+
+- **Verboten bleibt:** `RepositoryRole`/Personen-Rollen mit `bypass_mode: "always"` —
+  das ist die ursprüngliche, vollständig gültige Lehre aus #404.
+- **Erlaubt und empfohlen:** genau **ein** Automations-Actor pro Branch, sofern er eine
+  *Identität* und keine *Rolle* ist — bevorzugt ein **Deploy Key** (repo-gebunden, kein
+  Personenbezug). Voraussetzung dafür sind die seit Issue #122 getrennten Rulesets pro
+  Branch (siehe oben) — ein gemeinsames Ruleset für main+testing macht `bypass_actors`
+  unteilbar und verbietet damit implizit auch den gezielten Fall.
+- **Hinweis:** `github-actions[bot]` ist in Rulesets grundsätzlich **nicht** als
+  Bypass-Actor wählbar — GitHub lässt das aus Sicherheitsgründen nicht zu. Eine
+  Automation, die auf `testing` schreiben muss, braucht also einen Deploy Key (oder ein
+  PAT einer Machine-Identität), nicht `secrets.GITHUB_TOKEN`.
+- **Merksatz:** Ein Bypass ist nicht nur ein Sicherheitsrisiko, sondern auch eine
+  Abhängigkeit. Vor dem Entfernen prüfen, wer außer Menschen darüber schreibt.
+
+**Umsetzungsstand:** Diese Präzisierung ist die Policy-Entscheidung; die konkrete
+Einrichtung eines Deploy-Key-Bypass in einem Ruleset (z. B. für `fetch.yml` in
+EnergyPriceGermany) ist projektlokal und noch nicht ausgerollt — `bypass_actors: []`
+bleibt bis dahin der Default in allen zentralen Vorlagen.
 
 **Warum:** Bei EnergyPriceGermany hat genau dieser Bypass PR #404 den `testing`-Branch
 versehentlich löschen lassen (Release-PR `testing → main` mit „Automatically delete head
@@ -199,9 +271,12 @@ braucht (z. B. Hotfix an tot geglaubtem CI), das bewusst und projektlokal entsch
 nicht wieder pauschal in die zentrale Vorlage aufnehmen.
 
 **Verantwortung bei neuen/geänderten Rulesets:** Beim Anlegen oder Ändern eines Rulesets
-mit `deletion`-Regel immer `bypass_actors: []` setzen und mit `current_user_can_bypass`
-in der API-Antwort verifizieren (`"never"` erwartet), nicht nur prüfen, ob die Regel
-`deletion` überhaupt existiert — ein vorhandener `always`-Bypass macht sie wirkungslos.
+mit `deletion`-Regel als Default `bypass_actors: []` setzen. Ein einzelner Deploy-Key-Actor
+ist zulässig (siehe Präzisierung oben), ein `RepositoryRole`-Eintrag mit `bypass_mode:
+"always"` nicht. In jedem Fall mit `current_user_can_bypass` in der API-Antwort
+verifizieren (`"never"` erwartet, außer für den bewusst eingerichteten Deploy-Key-Actor),
+nicht nur prüfen, ob die Regel `deletion` überhaupt existiert — ein vorhandener
+`always`-Bypass macht sie wirkungslos.
 
 ### Test-Ebenen (Issue #69)
 
@@ -219,6 +294,7 @@ umgehbar. Alles Weitere läuft **lokal „in der Regel"** (Komfort, kein Gate).
 | `security-scan / security-scan` | Hardcoded Keys/Tokens + getrackte Secrets | nein | **alle Repos** |
 | `gitignore-audit / gitignore-audit` | `.gitignore`-Pflichteinträge + keine Secrets getrackt | nein | **alle Repos** |
 | `🔍 Code Quality & Linting` (EPG, Eisenhauer, 1x1_Trainer, DrawFromMemory, Pflanzkalender, CD-to-Spotify, epic_Calendar) oder `lint-and-typecheck` (safe-my-plants) | lint + type-check + test | **ja** | **nur Node-Repos** (Ausnahme: project-templates) |
+| `actionlint / actionlint` (`reusable-actionlint.yml`, eingehängt in `reusable-ci-quality.yml`) | Workflow-Dateien inkl. `run:`-Blöcken (shellcheck) | nein | **alle Repos mit `ci-cd-{web,react-native}.yml`** |
 
 > **Begründete Abweichung:** Der Quality-Check braucht `package.json`/Lockfile.
 > In reinen Doku-/Template-Repos (project-templates) würde `npm ci` immer scheitern
@@ -243,6 +319,36 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
    - `ci-cd-{web,react-native}.yml` → `.github/workflows/ci-quality.yml` (nur Node-Repos)
 2. **Erst nach dem ersten erfolgreichen Lauf** den Status-Check ins Ruleset eintragen
    (sonst wartet GitHub auf einen nie laufenden Check).
+
+### Actionlint (Issue #122, Lehre aus EnergyPriceGermany #445)
+
+`reusable-actionlint.yml` lintet alle Workflow-Dateien eines Repos, inklusive
+eingebetteter `shell: run:`-Blöcke (via `shellcheck`, das actionlint mitbringt).
+Er ist als eigener Job in `reusable-ci-quality.yml` eingehängt (`run_actionlint`,
+Default `true`) — Repos, die den bestehenden `ci-cd-{web,react-native}.yml`-Aufruf
+nutzen, erben ihn automatisch, ohne einen zusätzlichen Caller anzulegen.
+
+**Warum:** EnergyPriceGermany #445 blieb stundenlang unentdeckt, weil ein Apostroph
+in einem deutschen Fehlertext (innerhalb eines mehrzeiligen `node -e '…'`-Inline-Blocks)
+die Shell-Quotes vorzeitig schloss — `node` bekam `--` als Argument, Exit 9 in jedem
+Lauf, aber ohne dass ein Linter je hingesehen hätte. `actionlint`/`shellcheck` hätte
+genau das gefunden.
+
+**Zwei begleitende Konventionen (aus demselben Vorfall):**
+- **Logik gehört in `scripts/`, nicht in Workflow-Inline-Blöcke.** Mehrzeilige
+  `node -e '…'`- oder vergleichbare Inline-Skripte mit natürlichsprachigem Text sind
+  eine eigene Fehlerklasse, keine Stilfrage — sie entziehen sich jedem Editor-Linting.
+- **Alarm-Trennung: Datenlücke ≠ Workflow-Fehler.** Ein roter Run bedeutet „der Workflow
+  ist technisch defekt". Fachliche Befunde (z. B. „keine neuen Daten seit X Stunden")
+  gehören in ein Issue, nicht in den Exit-Code eines Jobs — sonst wird Rot mehrdeutig,
+  und ein echter technischer Defekt versteckt sich hinter einem bereits bekannten
+  fachlichen Alarm.
+
+**Rollout-Falle:** Reusable Workflows werden versioniert per `@v2` eingebunden — eine
+Änderung an `reusable-ci-quality.yml` wirkt in den konsumierenden Repos erst, wenn der
+`v2`-Tag verschoben wird. Nach dem Merge dieser Änderung: `v2`-Tag aktualisieren, dann
+`apply-rulesets.sh --dry-run` und einen echten PR je Repo abwarten, um zu bestätigen,
+dass der `actionlint`-Job tatsächlich läuft.
 
 ## Code-Formatierung: Prettier bleibt repo-lokal (Issue #93)
 
