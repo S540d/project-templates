@@ -36,6 +36,12 @@ jobs:
 
       - name: Run actionlint
         shell: bash
+        # SHELLCHECK_OPTS filtert info/style-Findings (z.B. SC2086, SC2129) heraus.
+        # Verifiziert (EnergyPriceGermany #445): diese Severity-Stufen sind reine
+        # Stilhinweise und sollen den Merge nicht blockieren; ab "warning" bleibt
+        # der Check scharf.
+        env:
+          SHELLCHECK_OPTS: -S warning
         run: |
           set -euo pipefail
 
