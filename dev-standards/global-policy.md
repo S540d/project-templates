@@ -323,16 +323,28 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
 ### Actionlint (Issue #122, Lehre aus EnergyPriceGermany #445)
 
 `reusable-actionlint.yml` lintet alle Workflow-Dateien eines Repos, inklusive
-eingebetteter `shell: run:`-Blöcke (via `shellcheck`, das actionlint mitbringt).
-Er ist als eigener Job in `reusable-ci-quality.yml` eingehängt (`run_actionlint`,
-Default `true`) — Repos, die den bestehenden `ci-cd-{web,react-native}.yml`-Aufruf
-nutzen, erben ihn automatisch, ohne einen zusätzlichen Caller anzulegen.
+eingebetteter `shell: run:`-Blöcke (via `shellcheck`, das actionlint mitbringt),
+und lädt zusätzlich `scripts/lint-workflows.js` aus `project-templates`
+(sparse checkout, versioniert über `templates_ref`, Default der v2-Tag).
 
-**Warum:** EnergyPriceGermany #445 blieb stundenlang unentdeckt, weil ein Apostroph
-in einem deutschen Fehlertext (innerhalb eines mehrzeiligen `node -e '…'`-Inline-Blocks)
-die Shell-Quotes vorzeitig schloss — `node` bekam `--` als Argument, Exit 9 in jedem
-Lauf, aber ohne dass ein Linter je hingesehen hätte. `actionlint`/`shellcheck` hätte
-genau das gefunden.
+**Wichtig — `reusable-ci-quality.yml` wird von keinem der 7 Repos aufgerufen**
+(jedes hat eine eigene handgeschriebene `ci-cd.yml`/`ci.yml`; siehe „Begründete
+Abweichung" oben). Das Einhängen von `actionlint` dort (`run_actionlint`,
+Default `true`) greift also nur für künftige Repos, die den reusable Aufruf
+tatsächlich nutzen. Für die 7 bestehenden Repos muss `reusable-actionlint.yml`
+als eigener Job direkt in die jeweilige `ci-cd.yml` eingetragen werden.
+Energy_Price_Germany hat bereits ein eigenes, gleichwertiges Inline-Actionlint
++ `lint-workflows.js` (aus #445 entstanden, vor diesem zentralen Workflow) —
+dort besteht kein Nachholbedarf.
+
+**Warum ein zusätzlicher Guard neben actionlint:** EnergyPriceGermany #445 blieb
+stundenlang unentdeckt, weil ein Apostroph in einem deutschen Fehlertext
+(innerhalb eines mehrzeiligen `node -e '…'`-Inline-Blocks) die Shell-Quotes
+vorzeitig schloss — `node` bekam `--` als Argument, Exit 9 in jedem Lauf.
+Verifiziert gegen den echten Bug: `actionlint`/`shellcheck` fand ihn **nicht**
+(der String ist für die Shell syntaktisch korrekt, nur semantisch falsch —
+shellcheck meldet dort nur ein harmloses SC2016-Info). `scripts/lint-workflows.js`
+prüft gezielt genau dieses Muster.
 
 **Zwei begleitende Konventionen (aus demselben Vorfall):**
 - **Logik gehört in `scripts/`, nicht in Workflow-Inline-Blöcke.** Mehrzeilige
