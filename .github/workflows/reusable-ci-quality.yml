@@ -43,11 +43,20 @@ on:
         required: false
         type: string
         default: 'npm test'
+      run_actionlint:
+        description: 'Workflow-Dateien mit actionlint linten (Issue #122)'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
+  actionlint:
+    if: ${{ inputs.run_actionlint }}
+    uses: S540d/project-templates/.github/workflows/reusable-actionlint.yml@v2
+
   quality:
     runs-on: ubuntu-latest
     steps:
