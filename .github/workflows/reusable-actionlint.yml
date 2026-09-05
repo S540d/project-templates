@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: true
+      templates_ref:
+        description: 'Ref von project-templates, aus dem scripts/lint-workflows.js geladen wird'
+        required: false
+        type: string
+        default: 'v2'
 
 permissions:
   contents: read
@@ -44,3 +49,19 @@ jobs:
           else
             echo "actionlint: Funde vorhanden, aber fail_on_findings=false."
           fi
+
+      - name: Checkout project-templates (lint-workflows.js)
+        uses: actions/checkout@v4
+        with:
+          repository: S540d/project-templates
+          ref: ${{ inputs.templates_ref }}
+          path: .project-templates
+          sparse-checkout: |
+            scripts/lint-workflows.js
+          sparse-checkout-cone-mode: false
+
+      - name: Guard gegen "node -e" Inline-Blöcke (Issue #445)
+        # Fängt die Fehlerklasse, die actionlint/shellcheck nachweislich NICHT
+        # findet: ein Apostroph im Body eines mehrzeiligen `node -e '…'`-Blocks
+        # ist für die Shell syntaktisch korrekt, nur semantisch falsch.
+        run: node .project-templates/scripts/lint-workflows.js
