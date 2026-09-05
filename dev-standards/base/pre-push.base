@@ -4,10 +4,40 @@
 # Kein Gate: CI (ci-quality.yml) ist das required Gate, nicht dieser Hook.
 # Installieren: cp dev-standards/base/pre-push.base .husky/pre-push
 #
+# Für den Workflow-Lint-Teil (Issue #122) zusätzlich einmalig:
+#   cp project-templates/scripts/lint-workflows.js scripts/lint-workflows.js
+#   brew install actionlint   (macOS; sonst https://github.com/rhysd/actionlint)
+# Ohne beides läuft der Hook trotzdem – der Workflow-Lint wird dann übersprungen,
+# der GitHub-Job (reusable-actionlint.yml) bleibt das Sicherheitsnetz.
+#
 # Umgehbar via: git push --no-verify  (nur auf explizite Bitte, analog --admin)
 # ─────────────────────────────────────────────────────────────────────────
 
 echo "🔍 Pre-push: schnelle Quality-Checks (lint + type-check + prettier)..."
+
+# Workflow-Linting (Issue #445, #122) – actionlint + Guard gegen "node -e"-Bug.
+# Optional: nur wenn actionlint lokal installiert ist (brew install actionlint),
+# sonst kein harter Abbruch – das GitHub-Job-Pendant (reusable-actionlint.yml)
+# bleibt das Sicherheitsnetz für Web-/Telefon-Sessions ohne lokalen Rechner.
+if command -v actionlint >/dev/null 2>&1; then
+  if SHELLCHECK_OPTS="-S warning" actionlint -color .github/workflows/*.yml; then
+    echo "✅ actionlint OK"
+  else
+    echo "❌ actionlint fehlgeschlagen – Push abgebrochen."
+    exit 1
+  fi
+
+  if [ -f scripts/lint-workflows.js ]; then
+    if node scripts/lint-workflows.js; then
+      echo "✅ Workflow-Guard OK"
+    else
+      echo "❌ Workflow-Guard fehlgeschlagen – Push abgebrochen."
+      exit 1
+    fi
+  fi
+else
+  echo "⚠️  actionlint nicht installiert (brew install actionlint) – Workflow-Lint übersprungen, GitHub-Job greift trotzdem."
+fi
 
 # Lint
 if npm run lint --if-present; then
