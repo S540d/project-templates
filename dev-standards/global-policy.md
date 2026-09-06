@@ -324,7 +324,7 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
 
 `reusable-actionlint.yml` lintet alle Workflow-Dateien eines Repos, inklusive
 eingebetteter `shell: run:`-Blöcke (via `shellcheck`, das actionlint mitbringt),
-und lädt zusätzlich `scripts/lint-workflows.js` aus `project-templates`
+und lädt zusätzlich `scripts/lint-workflows.cjs` aus `project-templates`
 (sparse checkout, versioniert über `templates_ref`, Default der v2-Tag).
 
 **Wichtig — `reusable-ci-quality.yml` wird von keinem der 7 Repos aufgerufen**
@@ -343,8 +343,16 @@ stundenlang unentdeckt, weil ein Apostroph in einem deutschen Fehlertext
 vorzeitig schloss — `node` bekam `--` als Argument, Exit 9 in jedem Lauf.
 Verifiziert gegen den echten Bug: `actionlint`/`shellcheck` fand ihn **nicht**
 (der String ist für die Shell syntaktisch korrekt, nur semantisch falsch —
-shellcheck meldet dort nur ein harmloses SC2016-Info). `scripts/lint-workflows.js`
+shellcheck meldet dort nur ein harmloses SC2016-Info). `scripts/lint-workflows.cjs`
 prüft gezielt genau dieses Muster.
+
+**`.cjs` statt `.js` (Issue #142):** Das Skript wird per `node
+.project-templates/scripts/lint-workflows.js` in jedem Ziel-Repo ausgeführt
+(sparse checkout). Node bestimmt das Modulsystem einer `.js`-Datei über das
+nächstgelegene `package.json` — das des Ziel-Repos, nicht von
+`project-templates`. Hat das Ziel-Repo `"type": "module"` gesetzt, interpretiert
+Node die CommonJS-`require()`-Aufrufe fälschlich als ESM und bricht ab. Die
+`.cjs`-Endung erzwingt CommonJS unabhängig vom `"type"`-Feld im Ziel-Repo.
 
 **Zwei begleitende Konventionen (aus demselben Vorfall):**
 - **Logik gehört in `scripts/`, nicht in Workflow-Inline-Blöcke.** Mehrzeilige
