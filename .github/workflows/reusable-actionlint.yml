@@ -19,7 +19,7 @@ on:
         type: boolean
         default: true
       templates_ref:
-        description: 'Ref von project-templates, aus dem scripts/lint-workflows.js geladen wird'
+        description: 'Ref von project-templates, aus dem scripts/lint-workflows.cjs geladen wird'
         required: false
         type: string
         default: 'v2'
@@ -56,18 +56,20 @@ jobs:
             echo "actionlint: Funde vorhanden, aber fail_on_findings=false."
           fi
 
-      - name: Checkout project-templates (lint-workflows.js)
+      - name: Checkout project-templates (lint-workflows.cjs)
         uses: actions/checkout@v4
         with:
           repository: S540d/project-templates
           ref: ${{ inputs.templates_ref }}
           path: .project-templates
           sparse-checkout: |
-            scripts/lint-workflows.js
+            scripts/lint-workflows.cjs
           sparse-checkout-cone-mode: false
 
       - name: Guard gegen "node -e" Inline-Blöcke (Issue #445)
         # Fängt die Fehlerklasse, die actionlint/shellcheck nachweislich NICHT
         # findet: ein Apostroph im Body eines mehrzeiligen `node -e '…'`-Blocks
         # ist für die Shell syntaktisch korrekt, nur semantisch falsch.
-        run: node .project-templates/scripts/lint-workflows.js
+        # .cjs statt .js (Issue #142): erzwingt CommonJS unabhängig vom
+        # "type": "module"-Feld im package.json des Ziel-Repos.
+        run: node .project-templates/scripts/lint-workflows.cjs
