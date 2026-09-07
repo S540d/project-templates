@@ -21,7 +21,7 @@ automation-templates/
 ├── ci-cd-web.yml                       # GitHub Actions (Web)
 ├── ci-cd-generic.yml                   # GitHub Actions (Generic)
 ├── security-scan.yml                   # Secret-/Token-Scan (Caller → reusable @v1)
-├── dependabot.yml                      # Dependency-Updates + Security-Alerts (Issue #60)
+├── dependabot.yml                      # Dependency-Updates, gedrosselt (Issue #60, #144)
 └── codeql.yml                          # Statische Code-Analyse / SAST (Issue #60)
 ```
 
@@ -38,10 +38,63 @@ optionaler, rein beratender On-demand-Review (Label `ai-review`) bestehen.
 | CodeQL | `.github/workflows/codeql.yml` | Code-Schwachstellen (SAST) |
 
 **Ausrollen pro Repo:**
-1. `dependabot.yml` → `.github/dependabot.yml` (Ecosystem anpassen: `npm` nur bei Node-Repos).
+1. `dependabot.yml` → `.github/dependabot.yml` (Ecosystem anpassen, siehe Vorprüfung unten).
 2. `codeql.yml` → `.github/workflows/codeql.yml` (nur JS/TS-Repos; `languages` anpassen).
 3. In den Repo-Settings unter *Security* die *Dependabot alerts* aktivieren.
 4. `ANTHROPIC_API_KEY` bleibt optional — nur nötig, wer den `ai-review`-Fallback nutzt.
+
+### Dependabot: Vorprüfung vor dem Kopieren (Issue #144)
+
+Die Vorlage passt **nicht** uniform auf jedes Repo. Drei Dinge vorher prüfen —
+alle drei erzeugen keinen Fehler, sondern still eine falsche oder wirkungslose
+Config:
+
+| Prüfen | Womit | Konsequenz |
+|--------|-------|------------|
+| Ökosystem | `package.json` / `requirements*.txt` / `pyproject.toml` | `pip` statt `npm` (z. B. Boersenspiel); Repos ohne Paketmanager (Shell/Docker) behalten **nur** den `github-actions`-Block |
+| Existiert `testing`? | `git show-ref --verify refs/remotes/origin/testing` | **Ohne `testing`-Branch den `target-branch` weglassen.** Ein `target-branch` auf einen nicht existierenden Branch legt Dependabot komplett still — es entstehen gar keine PRs mehr |
+| Echter Remote-Name | `git -C <dir> remote get-url origin` | Verzeichnisname ≠ Repo-Name (`EnergyPriceGermany` → `Energy_Price_Germany`, `epic_Calendar/Epic_Calendar`) |
+
+### Drosselung der PR-Flut (Issue #144)
+
+Die Vorlage ist bewusst gedrosselt:
+
+- **`interval: "monthly"`** statt `weekly`.
+- **Ein Sammel-Gruppenblock mit `patterns: ["*"]`** statt eines
+  `update-types`-Filters. Ein Filter auf `minor`+`patch` lässt Major-Updates
+  per Definition aus der Gruppe fallen — genau die lauten Bumps
+  (vitest 4→5, vite 7→8) öffnen dann je einen eigenen PR.
+- **`target-branch: "testing"`**, weil PRs gegen `main` wegen der
+  Ruleset-Pflicht (PR-Review + Status-Checks) nicht direkt mergebar sind.
+
+**Was die Config nicht leistet:**
+
+- `target-branch` wirkt nur auf **neue** PRs. Bereits offene PRs gegen `main`
+  bleiben stehen und müssen separat abgeräumt werden.
+- GitHubs **Default-Security-Updates ignorieren `target-branch`** und laufen
+  weiterhin gegen den Default-Branch. Sie werden von dieser Datei nicht
+  gedämpft. Wer sie loswerden will (z. B. bei gestoppten Projekten), schaltet
+  sie serverseitig ab — die *Alerts* bleiben davon unberührt:
+  ```bash
+  gh api -X DELETE repos/<owner>/<repo>/automated-security-fixes   # aus
+  gh api -X PUT    repos/<owner>/<repo>/automated-security-fixes   # wieder an
+  ```
+
+### Bestehende Configs nachziehen
+
+`sync-standards.sh` legt `dependabot.yml` nur an, wenn **keine** existiert, und
+lässt vorhandene bewusst unangetastet (Schutz repo-spezifischer Anpassungen).
+Eine geänderte Vorlage erreicht bestehende Repos dadurch **nicht**. Dafür gibt
+es ein eigenes Skript, das nur die Drosselungs-Felder patcht:
+
+```bash
+./scripts/patch-dependabot-throttle.sh --dry-run /abs/path/repoA /abs/path/repoB
+./scripts/patch-dependabot-throttle.sh          /abs/path/repoA /abs/path/repoB
+```
+
+Es ist idempotent, validiert das Ergebnis vor dem Schreiben als YAML und
+übernimmt den Quote-Stil der Zieldatei (Repos mit Prettier `singleQuote`
+lassen sonst den pre-push-Hook scheitern).
 
 ## 🚀 Schnellstart
 
