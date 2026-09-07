@@ -54,7 +54,12 @@ import os, re, sys
 
 path = sys.argv[1]
 dry = os.environ.get("DRY_RUN") == "1"
-lines = open(path, encoding="utf-8").read().splitlines()
+raw = open(path, encoding="utf-8").read()
+lines = raw.splitlines()
+
+# Quote-Stil aus der Datei uebernehmen: Repos mit Prettier singleQuote
+# (z. B. Pflanzkalender) lassen sonst den pre-push-Hook scheitern.
+Q = "'" if len(re.findall(r"'", raw)) > len(re.findall(r'"', raw)) else '"'
 
 out, changes = [], []
 i = 0
@@ -94,7 +99,7 @@ while i < n:
     new_block = []
     for b in block:
         if re.search(r'\binterval:\s*["\']?weekly["\']?', b):
-            new_block.append(re.sub(r'(interval:\s*)["\']?weekly["\']?', r'\1"monthly"', b))
+            new_block.append(re.sub(r'(interval:\s*)["\']?weekly["\']?', r'\1' + Q + 'monthly' + Q, b))
             changes.append(f"{eco}: interval weekly → monthly")
         else:
             new_block.append(b)
@@ -107,7 +112,7 @@ while i < n:
         for b in block:
             tmp.append(b)
             if re.match(r'^\s*directory:', b):
-                tmp.append(f'{field_indent}target-branch: "testing"')
+                tmp.append(f'{field_indent}target-branch: {Q}testing{Q}')
         block = tmp
         changes.append(f"{eco}: target-branch: testing ergänzt")
 
@@ -120,7 +125,7 @@ while i < n:
         f"{field_indent}  # Kein update-types-Filter → Major landet mit im Sammel-PR.",
         f"{field_indent}  {group_name}:",
         f"{field_indent}    patterns:",
-        f'{field_indent}      - "*"',
+        f'{field_indent}      - {Q}*{Q}',
     ]
     if gidx is None:
         while block and not block[-1].strip():
