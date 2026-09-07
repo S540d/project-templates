@@ -140,6 +140,12 @@ Branch Protection: main mit 1x Review minimum
 ```
 - 📄 Vollständig in: [technische_vorgaben.md → CI/CD & GitHub Actions](technische_vorgaben.md#cicd--github-actions)
 
+**Dependency-Updates (Dependabot):** monatlich, alle Updates in **einem**
+Sammel-PR (inkl. Major), gegen `testing` statt `main`. Vor dem Ausrollen in ein
+Repo Ökosystem (`npm`/`pip`/keins) und die Existenz eines `testing`-Branches
+prüfen — ein `target-branch` auf einen fehlenden Branch legt Dependabot still.
+- 📄 Vollständig in: [automation-templates/README.md → Security-Stack](../../automation-templates/README.md#-security-stack-kostenlos-ohne-api)
+
 ---
 
 ## 📋 Pre-Production Checklist

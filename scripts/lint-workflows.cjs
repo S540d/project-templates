@@ -19,7 +19,7 @@
  *   2. Mehrzeilige `node -e '…'`-Blöcke überhaupt → Warnung
  *      (Logik gehört nach scripts/, nicht in Workflow-Inline-Blöcke)
  *
- * Aufruf: node scripts/lint-workflows.js [workflow-verzeichnis]
+ * Aufruf: node scripts/lint-workflows.cjs [workflow-verzeichnis]
  */
 
 const fs = require('fs');

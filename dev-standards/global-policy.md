@@ -309,7 +309,7 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
 
 | Check | Wo | Hinweis |
 |---|---|---|
-| `pre-push`: lint + type-check + prettier | Node-Repos | `dev-standards/base/pre-push.base`; umgehbar via `--no-verify` (nur auf explizite Bitte) |
+| `pre-push`: lint + type-check + prettier + actionlint | Node-Repos | `dev-standards/base/pre-push.base`; umgehbar via `--no-verify` (nur auf explizite Bitte). actionlint-Teil optional (Installation im Datei-Kommentar), übersprungen statt hart fehlzuschlagen, wenn nicht installiert |
 | dev-standards-audit | alle | lokal/wöchentlicher Cron-Audit; **kein** Merge-Gate (würde Repos bei Standards-Drift koppeln) |
 | E2E-/Device-Tests | wo nicht CI-machbar | echte Geräte/Secrets/flaky → Release-Checklist, nie Merge-Gate |
 
@@ -324,7 +324,7 @@ safe-my-plants, CD-to-Spotify-PWA, epic_Calendar.
 
 `reusable-actionlint.yml` lintet alle Workflow-Dateien eines Repos, inklusive
 eingebetteter `shell: run:`-Blöcke (via `shellcheck`, das actionlint mitbringt),
-und lädt zusätzlich `scripts/lint-workflows.js` aus `project-templates`
+und lädt zusätzlich `scripts/lint-workflows.cjs` aus `project-templates`
 (sparse checkout, versioniert über `templates_ref`, Default der v2-Tag).
 
 **Wichtig — `reusable-ci-quality.yml` wird von keinem der 7 Repos aufgerufen**
@@ -343,8 +343,16 @@ stundenlang unentdeckt, weil ein Apostroph in einem deutschen Fehlertext
 vorzeitig schloss — `node` bekam `--` als Argument, Exit 9 in jedem Lauf.
 Verifiziert gegen den echten Bug: `actionlint`/`shellcheck` fand ihn **nicht**
 (der String ist für die Shell syntaktisch korrekt, nur semantisch falsch —
-shellcheck meldet dort nur ein harmloses SC2016-Info). `scripts/lint-workflows.js`
+shellcheck meldet dort nur ein harmloses SC2016-Info). `scripts/lint-workflows.cjs`
 prüft gezielt genau dieses Muster.
+
+**`.cjs` statt `.js` (Issue #142):** Das Skript wird per `node
+.project-templates/scripts/lint-workflows.js` in jedem Ziel-Repo ausgeführt
+(sparse checkout). Node bestimmt das Modulsystem einer `.js`-Datei über das
+nächstgelegene `package.json` — das des Ziel-Repos, nicht von
+`project-templates`. Hat das Ziel-Repo `"type": "module"` gesetzt, interpretiert
+Node die CommonJS-`require()`-Aufrufe fälschlich als ESM und bricht ab. Die
+`.cjs`-Endung erzwingt CommonJS unabhängig vom `"type"`-Feld im Ziel-Repo.
 
 **Zwei begleitende Konventionen (aus demselben Vorfall):**
 - **Logik gehört in `scripts/`, nicht in Workflow-Inline-Blöcke.** Mehrzeilige
@@ -361,6 +369,16 @@ prüft gezielt genau dieses Muster.
 `v2`-Tag verschoben wird. Nach dem Merge dieser Änderung: `v2`-Tag aktualisieren, dann
 `apply-rulesets.sh --dry-run` und einen echten PR je Repo abwarten, um zu bestätigen,
 dass der `actionlint`-Job tatsächlich läuft.
+
+**Lokal zusätzlich (Ebene B, siehe Test-Ebenen unten):** `dev-standards/base/pre-push.base`
+führt denselben `actionlint`- und `lint-workflows.js`-Check lokal vor dem Push aus —
+schnelleres Feedback, kein Warten auf CI. Voraussetzung ist `brew install actionlint`
+und eine lokale Kopie von `scripts/lint-workflows.js` im Zielrepo (Details im
+Datei-Kommentar von `pre-push.base`); fehlt eines von beidem, wird der Teil übersprungen,
+statt den Push hart zu blockieren. Der GitHub-Job bleibt in jedem Fall bestehen — er ist
+das einzige Sicherheitsnetz für Pushes aus Web-/Telefon-Sessions ohne lokalen Rechner,
+wo der Hook nicht installiert sein kann (gleiches Prinzip wie bei den übrigen
+Ebene-A-Checks).
 
 ## Code-Formatierung: Prettier bleibt repo-lokal (Issue #93)
 
