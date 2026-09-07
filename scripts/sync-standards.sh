@@ -167,12 +167,26 @@ copy_to_project() {
   # ein serverseitiger Repo-Schalter und werden hier NICHT gesetzt:
   #   gh api -X PUT repos/<slug>/vulnerability-alerts
   #   gh api -X PUT repos/<slug>/automated-security-fixes
+  # Aenderungen an der VORLAGE erreichen bestehende Configs hier bewusst nicht.
+  # Zum gezielten Nachziehen der Drosselungs-Felder (Issue #144):
+  #   ./scripts/patch-dependabot-throttle.sh [--dry-run] "$project_dir"
   if [ -f "$project_dir/.github/dependabot.yml" ]; then
     echo "   • .github/dependabot.yml vorhanden – unangetastet"
+    echo "     (Drosselung nachziehen: scripts/patch-dependabot-throttle.sh)"
   else
     run mkdir -p "$project_dir/.github"
     run cp "$ROOT_DIR/automation-templates/dependabot.yml" "$project_dir/.github/dependabot.yml"
-    echo "   ✓ .github/dependabot.yml neu angelegt (npm-Block ggf. entfernen)"
+    echo "   ✓ .github/dependabot.yml neu angelegt"
+    # Vorlage passt nicht uniform: Oekosystem (npm/pip/keins) und die Existenz
+    # eines testing-Branches muessen geprueft werden. Ein target-branch auf
+    # einen fehlenden Branch legt Dependabot komplett stumm (Issue #144).
+    if [ ! -f "$project_dir/package.json" ]; then
+      echo "     ⚠ kein package.json – npm-Block pruefen (pip? ganz entfernen?)"
+    fi
+    if ! git -C "$project_dir" show-ref --verify --quiet refs/remotes/origin/testing 2>/dev/null; then
+      echo "     ⚠ kein testing-Branch – target-branch entfernen, sonst legt"
+      echo "       Dependabot gar keine PRs mehr an"
+    fi
   fi
 
   # CodeQL nur für Repos mit JS/TS-Code – die Vorlage deklariert
