@@ -60,7 +60,7 @@ Alle Repos folgen diesem einheitlichen Schema:
 |---|---|---|
 | `CLAUDE.md` (Root) | **committet** | Projektinstruktionen für Claude — öffentlich, versioniert |
 | `.claude/commands/` | **committet** | Geteilte Slash-Commands — versioniert (Issue #31) |
-| `.claude/settings.local.json`, `.claude/cache/`, `.claude/memory/` | **gitignored** | Maschinenspezifisch, lokal |
+| `.claude/settings.local.json`, `.claude/cache/`, `.claude/memory.md` | **gitignored** | Maschinenspezifisch, lokal |
 
 ### `.gitignore`-Pflichtzeilen für Claude Code
 Jedes Repo muss in `.gitignore` enthalten:
@@ -69,13 +69,20 @@ Jedes Repo muss in `.gitignore` enthalten:
 # .claude/commands/ wird bewusst getrackt (Issue #31) → NICHT ignorieren.
 .claude/settings.local.json
 .claude/cache/
-.claude/memory/
+.claude/memory.md
 ```
 
 ### Warum
 - `CLAUDE.md` im Root wird von Claude Code automatisch gelesen und ist für alle Entwickler sichtbar
 - `.claude/commands/` enthält geteilte Slash-Commands, die für alle Entwickler im Repo gelten → versioniert (Issue #31)
 - Maschinenspezifische Artefakte (Settings, Cache, Memory) gehören nicht ins Repo
+
+**Korrektur (Issue #141):** Die tatsächlich genutzte Memory-Datei ist die
+flache Datei `.claude/memory.md`, kein Verzeichnis `.claude/memory/`. Das
+alte Verzeichnis-Muster erfasste die Datei nicht und musste in allen Repos
+korrigiert werden. `safe-my-plants` hat `.claude/memory.md` vor dieser
+Korrektur bereits committet — diese historischen Commits bleiben in der
+Historie, ab jetzt gilt aber auch dort die gitignored/lokale Konvention.
 
 ## Memory vs. CLAUDE.md (Issue #94)
 
