@@ -85,6 +85,24 @@ weglassen — zeigt, dass die Checkliste tatsächlich durchgegangen wurde),
 Prioritäts-Hinweis am Ende. Immer auf project-templates#136 bzw.
 `dev-standards/code-health-audit.md` verweisen.
 
+## Output-Verhalten (verbindlich)
+
+Der Audit-Prozess selbst (Checkliste, Verifikation, Issue-Inhalt) bleibt
+unverändert — nur wie währenddessen an den Nutzer kommuniziert wird, ändert
+sich:
+
+- **Während des Durchlaufs:** keine Kommandos, `grep`-Ausgaben oder
+  Zwischenbefunde im Chat ausbreiten. Stattdessen knappe Ein-Zeiler als
+  Lebenszeichen bei jedem abgeschlossenen Checklistenpunkt, z. B. „CI-Gate
+  geprüft — sauber", „God-Component-Scan: `game.tsx` auffällig", „Dead-Code
+  verifiziert". Die eigentliche Analyse (Lesen, Grep, Verifizieren) läuft wie
+  gewohnt über Tool-Calls, nur die Textantworten dazwischen bleiben minimal.
+- **Am Ende:** ausschließlich eine kompakte Zusammenfassung — Link zum
+  erstellten/aktualisierten Issue, Anzahl der Befunde nach Priorität, ein
+  Satz je Befund (nicht der volle Issue-Text nochmal). Keine Wiederholung der
+  Einzelschritte, keine erneute Auflistung der „Kein Befund"-Punkte im Chat
+  (die stehen bereits vollständig im Issue).
+
 ## Nicht-Ziel
 
 - Keine Codeänderungen im Ziel-Repo
