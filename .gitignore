@@ -11,8 +11,11 @@ credentials.json
 *.p12
 *.p8
 
-# Interne, nicht-öffentliche Docs (ausführliche Guides/Standards liegen im
-# lokalen Projekt-Memory, nicht im öffentlichen Repo — Issue: README-Kürzung 2026-09-20)
+# Interne, nicht-öffentliche Docs
+docs/private/
+
+# Ausführliche Guides/Standards liegen im lokalen Projekt-Memory, nicht im
+# öffentlichen Repo (README-Kürzung 2026-09-20)
 docs/
 dev-standards/global-policy.md
 dev-standards/about-section.md
