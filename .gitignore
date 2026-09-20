@@ -14,6 +14,12 @@ credentials.json
 # Interne, nicht-öffentliche Docs
 docs/private/
 
+# Ausführliche Guides/Standards liegen im lokalen Projekt-Memory, nicht im
+# öffentlichen Repo (README-Kürzung 2026-09-20)
+docs/
+dev-standards/global-policy.md
+dev-standards/about-section.md
+
 # Claude Code – nur maschinenspezifische Artefakte ignorieren.
 # .claude/commands/ wird bewusst getrackt (Issue #31) → NICHT ignorieren.
 .claude/settings.local.json

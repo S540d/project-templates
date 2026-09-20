@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run actionlint
         shell: bash
@@ -57,7 +57,7 @@ jobs:
           fi
 
       - name: Checkout project-templates (lint-workflows.cjs)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: S540d/project-templates
           ref: ${{ inputs.templates_ref }}
