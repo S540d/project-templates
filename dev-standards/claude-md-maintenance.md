@@ -134,7 +134,7 @@ ausgliederbarem Prozesswissen.
 | Grundlagen_Linguistik | — (hatte keine CLAUDE.md) | ✅ von Anfang an regelkonform angelegt (PR #8, gemergt) |
 | epic_Calendar | ~325 (54 KB) | 🔶 Cleanup-PR offen (Epic_Calendar#264) |
 | Boersenspiel | 1458 | 🔶 erster Pass umgesetzt (PR #116) — Vorfälle ausgelagert, bleibt bewusst über 500 Zeilen wegen Architektur-Doku (siehe Klarstellung oben) |
-| Pflanzkalender | 615 | ⏳ offen |
+| Pflanzkalender | 224 (vorher 615) | ✅ umgesetzt (PR #296) |
 | DrawFromMemory | 542 | ⏳ offen |
 | 1x1_Trainer | 389 | ⏳ offen |
 | safe_my_plants | 377 | ⏳ offen |
