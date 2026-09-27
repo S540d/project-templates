@@ -114,18 +114,30 @@ verdichten, dass sie ihre Warnwirkung verlieren. Ziel ist Verschiebung an den
 richtigen Ort, nicht Kürzung von Inhalt — jede verschobene Information muss
 in der Zieldatei vollständig wiederzufinden sein.
 
-## Stand nach Ausrollen (2026-09-27)
+**Die Regel adressiert nur Vorfalls-/Bugfix-Narrative, nicht die
+Gesamtlänge als Kürzungsziel.** Bei Boersenspiel zeigte sich, dass ein
+Großteil der Länge keine Vorfälle sind, sondern laufende
+Architektur-/Modellierungsentscheidungen, die laut Projektkonvention bewusst
+direkt in CLAUDE.md stehen sollen. Die 300-Zeilen-Schwelle bleibt der
+Auslöser, um eine Datei zu prüfen — sie verlangt aber nicht, jede Datei
+zwanghaft unter 300 Zeilen zu drücken, wenn der Überhang aus bewusst dort
+gehaltenem, aktuellem Architekturwissen besteht statt aus Vorfällen oder
+ausgliederbarem Prozesswissen.
+
+## Stand nach Ausrollen (Stand 2026-09-27, siehe Issue #160 für Kommentar-Historie)
 
 | Projekt | CLAUDE.md-Zeilen | Status |
 |---|---|---|
 | EnergyPriceGermany | 346 (vorher 1055) | ✅ umgesetzt (PR #504) |
-| Boersenspiel | 1458 | ⏳ offen |
+| Eisenhauer | 38 KB (vorher 44 KB) | ✅ umgesetzt (PR #466, gemergt) |
+| ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 (bereits unter Schwelle) | ✅ Vorfalls-Erzählung ausgelagert (PR #32) |
+| Grundlagen_Linguistik | — (hatte keine CLAUDE.md) | ✅ von Anfang an regelkonform angelegt (PR #8, gemergt) |
+| epic_Calendar | ~325 (54 KB) | 🔶 Cleanup-PR offen (Epic_Calendar#264) |
+| Boersenspiel | 1458 | 🔶 erster Pass umgesetzt (PR #116) — Vorfälle ausgelagert, bleibt bewusst über 500 Zeilen wegen Architektur-Doku (siehe Klarstellung oben) |
 | Pflanzkalender | 615 | ⏳ offen |
 | DrawFromMemory | 542 | ⏳ offen |
 | 1x1_Trainer | 389 | ⏳ offen |
 | safe_my_plants | 377 | ⏳ offen |
-| Eisenhauer | 363 | ⏳ offen |
-| ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 | ⏳ offen |
 | CD-to-Spotify-PWA | 212 | ⏳ prüfen (knapp unter 300) |
 | myNotes | 213 | ⏳ prüfen |
 | document_sorter_app | 182 | ⏳ prüfen |
@@ -133,8 +145,8 @@ in der Zieldatei vollständig wiederzufinden sein.
 | backup-my-Garmin-Fenix | 125 | ⏳ prüfen |
 | Apple_Notizen_Export_Skript | 115 | ✅ unter 300 |
 | influxDB_cleaning_programm | 50 | ✅ unter 300 |
-| epic_Calendar | — (noch nicht gemessen) | ⏳ offen |
 
-Zeilenzahlen Stand 2026-09-27, vor dem jeweiligen Wartungs-Durchlauf. Nach
-jedem Durchlauf diese Tabelle aktualisieren (nicht als separates Issue
-pflegen — sie gehört hierher, an die Prozessbeschreibung).
+Zeilenzahlen sind der jeweils zuletzt bekannte Stand vor bzw. nach dem
+Wartungs-Durchlauf (siehe Status-Spalte). Nach jedem Durchlauf diese Tabelle
+aktualisieren (nicht als separates Issue pflegen — sie gehört hierher, an die
+Prozessbeschreibung).
