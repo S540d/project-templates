@@ -128,21 +128,22 @@ ausgliederbarem Prozesswissen.
 
 | Projekt | CLAUDE.md-Zeilen | Status |
 |---|---|---|
-| EnergyPriceGermany | 346 (vorher 1055) | ✅ umgesetzt (PR #504) |
-| Eisenhauer | 38 KB (vorher 44 KB) | ✅ umgesetzt (PR #466, gemergt) |
+| EnergyPriceGermany | 346 (vorher 1055) | 🔶 PR #504 gemergt, liegt real aber wieder über der 300-Schwelle — erneuter Kürzungsdurchlauf nötig |
+| Eisenhauer | 363 (38 KB, vorher 44 KB) | 🔶 PR #466 gemergt, seither wieder über 300 Zeilen gewachsen — erneut prüfen |
 | ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 (bereits unter Schwelle) | ✅ Vorfalls-Erzählung ausgelagert (PR #32) |
 | Grundlagen_Linguistik | — (hatte keine CLAUDE.md) | ✅ von Anfang an regelkonform angelegt (PR #8, gemergt) |
-| epic_Calendar | ~325 (54 KB) | 🔶 Cleanup-PR offen (Epic_Calendar#264) |
+| epic_Calendar | 324 (54 KB) | 🔶 Cleanup-PR offen (Epic_Calendar#264) |
 | Boersenspiel | 1458 | 🔶 erster Pass umgesetzt (PR #116) — Vorfälle ausgelagert, bleibt bewusst über 500 Zeilen wegen Architektur-Doku (siehe Klarstellung oben) |
 | Pflanzkalender | 224 (vorher 615) | ✅ umgesetzt (PR #296) |
+| history_line | 713 | ⏳ offen — noch kein Wartungs-Durchlauf gemacht |
 | DrawFromMemory | 542 | ⏳ offen |
 | 1x1_Trainer | 235 (vorher 389) | ✅ umgesetzt (PR #388, gemergt) |
 | safe_my_plants | 377 | ⏳ offen |
-| CD-to-Spotify-PWA | 212 | ⏳ prüfen (knapp unter 300) |
-| myNotes | 213 | ⏳ prüfen |
-| document_sorter_app | 182 | ⏳ prüfen |
-| Smart_Home_Multi-Display_ESP32 | 152 | ⏳ prüfen |
-| backup-my-Garmin-Fenix | 125 | ⏳ prüfen |
+| CD-to-Spotify-PWA | 212 | ✅ unter 300 |
+| myNotes | 213 | ✅ unter 300 |
+| document_sorter_app | 182 | ✅ unter 300 |
+| Smart_Home_Multi-Display_ESP32 | 152 | ✅ unter 300 |
+| backup-my-Garmin-Fenix | 125 | ✅ unter 300 |
 | Apple_Notizen_Export_Skript | 115 | ✅ unter 300 |
 | influxDB_cleaning_programm | 50 | ✅ unter 300 |
 
@@ -150,3 +151,22 @@ Zeilenzahlen sind der jeweils zuletzt bekannte Stand vor bzw. nach dem
 Wartungs-Durchlauf (siehe Status-Spalte). Nach jedem Durchlauf diese Tabelle
 aktualisieren (nicht als separates Issue pflegen — sie gehört hierher, an die
 Prozessbeschreibung).
+
+### docs/private/-Check (Stand 2026-09-27, Issue #160)
+
+Cross-Projekt-Prüfung, ob `ARCHITECTURE.md` fälschlich unter `docs/private/`
+statt versioniert unter `docs/` liegt: **kein Treffer.** `ARCHITECTURE.md`
+liegt in allen betroffenen Projekten (1x1_Trainer, CD-to-Spotify-PWA,
+DrawFromMemory, Eisenhauer, EnergyPriceGermany, Pflanzkalender,
+safe_my_plants) korrekt versioniert unter `docs/`.
+
+`INCIDENTS.md` liegt korrekt unter `docs/private/` (gitignored) nur in
+EnergyPriceGermany (~33 KB) und Pflanzkalender (~13 KB); beide `.gitignore`
+enthalten den nötigen `docs/private/`-Eintrag. `docs/private/` wird in
+1x1_Trainer, DrawFromMemory und Eisenhauer zusätzlich als Ablageort für
+sonstige lokale Doku (Play-Store-Metadaten, Release-Checklisten,
+Deployment-Guides) genutzt — zulässig, aber kein Incidents-Fall.
+
+Nebenbefund: Boersenspiel fehlte der `docs/private/`-Eintrag in `.gitignore`
+(dort ist pauschal `docs/` ignoriert) — ergänzt, bestehende Policy sonst
+unverändert gelassen.
