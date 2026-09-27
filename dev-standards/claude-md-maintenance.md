@@ -136,7 +136,7 @@ ausgliederbarem Prozesswissen.
 | Boersenspiel | 1458 | 🔶 erster Pass umgesetzt (PR #116) — Vorfälle ausgelagert, bleibt bewusst über 500 Zeilen wegen Architektur-Doku (siehe Klarstellung oben) |
 | Pflanzkalender | 224 (vorher 615) | ✅ umgesetzt (PR #296) |
 | DrawFromMemory | 542 | ⏳ offen |
-| 1x1_Trainer | 389 | ⏳ offen |
+| 1x1_Trainer | 235 (vorher 389) | ✅ umgesetzt (PR #388, gemergt) |
 | safe_my_plants | 377 | ⏳ offen |
 | CD-to-Spotify-PWA | 212 | ⏳ prüfen (knapp unter 300) |
 | myNotes | 213 | ⏳ prüfen |
