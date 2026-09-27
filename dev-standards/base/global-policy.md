@@ -21,6 +21,11 @@
 - **Gradle-Lock nach Absturz:** Bei "Cannot lock file hash cache"-Fehler Daemons stoppen: `pkill -f GradleDaemon`, dann Workingdir leeren und neu starten
 - **AAB-Archiv:** Gebaute Release-AABs in einem **gitignored** `aab-archive/`-Verzeichnis im Repo-Root ablegen (in `.gitignore` aufnehmen – AABs sind 3–110 MB und gehören nie in die Git-History). Benennung: `<Projekt>-vX.Y.Z-vc<versionCode>-YYYY-MM-DD.aab`. **Retention: max. 2 Dateien** (aktuelles Release + ein Vorgänger für schnelles Rollback); ältere AABs löschen. Der Git-Tag `vX.Y.Z` ist die eigentliche Release-Baseline – ältere AABs lassen sich daraus jederzeit neu bauen.
 
+## [CLAUDE.MD-WARTUNG]
+
+- **Vorfalls-Abschnitte in CLAUDE.md bleiben kurz** (Issue #160): Beschreibt ein Abschnitt einen konkreten Vorfall, gehören maximal 2-3 Zeilen (Kernregel + kurzer Auslöser-Kontext) + ein Link auf die projekteigene `INCIDENTS.md`/Vorfallsarchiv hinein. Die ausführliche Erzählung (Zeitstempel, PR-Nummern, betroffene Dateien, Diagnose-Schritte, Beispielwerte) gehört ausschließlich in die `INCIDENTS.md` — nie doppelt in beide Dateien.
+- **Schwellenwert „zu groß":** CLAUDE.md > 500 Zeilen oder > 30 KB. Ab dieser Größe im nächsten Code-Health-Audit-Zyklus prüfen, ob Vorfalls-Erzählungen entgegen der Regel oben direkt im Fließtext stehen, statt nur verlinkt zu sein.
+
 ## [CODE HEALTH AUDIT]
 
 - **Wiederkehrendes Code-Health-Audit** (Ballast/Architektur: God Components, Boilerplate-Duplikation, toter Code, Dependency-Bloat, Test-Integrität, Design-Konsistenz, Bundle-Größe) alle ~3 Monate oder ~15 gemergte Feature-PRs (je nachdem was zuerst eintritt). Checkliste + Ablauf: https://github.com/S540d/project-templates/blob/main/dev-standards/code-health-audit.md — Ergebnis ist immer ein Issue im jeweiligen Projekt-Repo, nie in project-templates.
