@@ -23,8 +23,9 @@
 
 ## [CLAUDE.MD-WARTUNG]
 
-- **Vorfalls-Abschnitte in CLAUDE.md bleiben kurz** (Issue #160): Beschreibt ein Abschnitt einen konkreten Vorfall, gehören maximal 2-3 Zeilen (Kernregel + kurzer Auslöser-Kontext) + ein Link auf die projekteigene `INCIDENTS.md`/Vorfallsarchiv hinein. Die ausführliche Erzählung (Zeitstempel, PR-Nummern, betroffene Dateien, Diagnose-Schritte, Beispielwerte) gehört ausschließlich in die `INCIDENTS.md` — nie doppelt in beide Dateien.
-- **Schwellenwert „zu groß":** CLAUDE.md > 500 Zeilen oder > 30 KB. Ab dieser Größe im nächsten Code-Health-Audit-Zyklus prüfen, ob Vorfalls-Erzählungen entgegen der Regel oben direkt im Fließtext stehen, statt nur verlinkt zu sein.
+- **CLAUDE.md bleibt bei maximal 300 Zeilen** (Issue #160): Sie wird bei jeder Session vollständig in den Kontext geladen. Beschreibt ein Abschnitt einen konkreten Vorfall, gehören maximal 2-3 Zeilen (Kernregel + kurzer Auslöser-Kontext) + ein Link auf `docs/private/INCIDENTS.md` hinein. Die ausführliche Erzählung (Zeitstempel, PR-Nummern, betroffene Dateien, Diagnose-Schritte, Beispielwerte) gehört ausschließlich in `docs/private/INCIDENTS.md` — nie doppelt in beide Dateien.
+- **`docs/private/INCIDENTS.md` ist bewusst gitignored** — reine lokale Gedächtnisstütze wie Memory, kein Teil des geteilten Repo-Zustands. In jedem Projekt mit dieser Datei muss `.gitignore` einen Eintrag `docs/private/` enthalten; existiert die Datei bereits versioniert (z. B. als `docs/INCIDENTS.md`), gehört sie nach `docs/private/` verschoben und per `git rm --cached` aus dem Tracking genommen.
+- **Schwellenwert „zu groß":** CLAUDE.md > 300 Zeilen. Ab dieser Größe im nächsten Code-Health-Audit-Zyklus prüfen, ob Vorfalls-Erzählungen entgegen der Regel oben direkt im Fließtext stehen, statt nur verlinkt zu sein.
 
 ## [CODE HEALTH AUDIT]
 
