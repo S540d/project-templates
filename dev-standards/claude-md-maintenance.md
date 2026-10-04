@@ -26,6 +26,12 @@ Kernregel verloren ging.
 **CLAUDE.md bleibt bei maximal 300 Zeilen.** Das ist die endgültige Vorgabe,
 nicht die ursprünglich diskutierte Zwischenstufe von 500 Zeilen/30 KB.
 
+**Aktiv gekürzt wird erst ab 500 Zeilen** (Entscheidung 2026-10-04). Dateien
+zwischen 300 und 500 Zeilen werden im Turnus nicht angefasst: Die Schwelle von
+300 bleibt Richtwert für neu angelegte Dateien und Prüf-Auslöser beim
+Bearbeiten, rechtfertigt aber allein keinen eigenen Kürzungs-PR. Archivierte
+Projekte sind ausgenommen.
+
 ## Wohin Inhalte gehören
 
 | Inhaltstyp | Zielort | Sichtbarkeit |
@@ -66,7 +72,8 @@ nur der aktuelle Tracked-Zustand ändert sich.
    nein, dort ergänzen (als neuer Abschnitt, mit Anker für den Rückverweis),
    dann in `CLAUDE.md` auf 1-3 Zeilen + Link kürzen.
 4. **Größencheck:** `wc -l CLAUDE.md`. Über 300 Zeilen → Schritt 2/3
-   wiederholen, ggf. auch scheinbar kurze Abschnitte zusammenfassen oder in
+   wiederholen (sofern der Durchlauf ohnehin stattfindet; siehe Zielgröße: ein
+   reiner Kürzungs-PR lohnt erst ab 500 Zeilen), ggf. auch scheinbar kurze Abschnitte zusammenfassen oder in
    Aufzählungen verdichten.
 5. **Links verifizieren:** jeder erzeugte `docs/...#anchor`-Link muss auf eine
    tatsächlich existierende Überschrift zeigen (GitHub-Anker-Slug-Regeln:
@@ -128,17 +135,17 @@ ausgliederbarem Prozesswissen.
 
 | Projekt | CLAUDE.md-Zeilen | Status |
 |---|---|---|
-| EnergyPriceGermany | 346 (vorher 1055) | 🔶 PR #504 gemergt, liegt real aber wieder über der 300-Schwelle — erneuter Kürzungsdurchlauf nötig |
-| Eisenhauer | 363 (38 KB, vorher 44 KB) | 🔶 PR #466 gemergt, seither wieder über 300 Zeilen gewachsen — erneut prüfen |
-| ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 | ✅ Vorfalls-Erzählung ausgelagert (PR #32), knapp über Schwelle |
+| EnergyPriceGermany | 346 (vorher 1055) | ✅ PR #504 gemergt; 300–500 Zeilen werden nicht weiter gekürzt |
+| Eisenhauer | 363 (38 KB, vorher 44 KB) | ✅ PR #466 gemergt; 300–500 Zeilen werden nicht weiter gekürzt |
+| ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 | ✅ Vorfalls-Erzählung ausgelagert (PR #32), im Toleranzbereich 300–500 |
 | Grundlagen_Linguistik | — (hatte keine CLAUDE.md) | ✅ von Anfang an regelkonform angelegt (PR #8, gemergt) |
-| epic_Calendar | 324 (54 KB) | 🔶 PR #264 gemergt, liegt real noch über 300 — erneuter Durchlauf nötig |
+| epic_Calendar | 324 (54 KB) | ✅ PR #264 gemergt; 300–500 Zeilen werden nicht weiter gekürzt |
 | Boersenspiel | ~70 (vorher 1458) | ✅ PR #116 + #117 gemergt (Vorfälle → INCIDENTS.md, Architektur-Doku → `docs/ARCHITECTURE.md`) |
 | Pflanzkalender | 224 (vorher 615) | ✅ umgesetzt (PR #296) |
-| history_line | 713 | ⏳ offen — noch kein Wartungs-Durchlauf gemacht |
+| history_line | 713 | ⛔ Projekt archiviert — ausgenommen |
 | DrawFromMemory | 300 (vorher 542) | ✅ umgesetzt (PR #344) |
 | 1x1_Trainer | 235 (vorher 389) | ✅ umgesetzt (PR #388) |
-| safe_my_plants | 245 (vorher 377) | 🔶 PR safe-my-plants#186 offen (Android-Build-Ablauf → `docs/ANDROID_BUILD.md`) |
+| safe_my_plants | 245 (vorher 377) | ✅ umgesetzt (safe-my-plants#186, Android-Build-Ablauf → `docs/ANDROID_BUILD.md`) |
 | CD-to-Spotify-PWA | 212 | ✅ unter 300 |
 | myNotes | 213 | ✅ unter 300 |
 | document_sorter_app | 182 | ✅ unter 300 |
