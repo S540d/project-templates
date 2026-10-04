@@ -212,6 +212,18 @@ copy_to_project() {
   else
     echo "   • Kein package.json – CodeQL (javascript-typescript) übersprungen"
   fi
+
+  # 5. SECURITY.md (Issue #113) – nur anlegen, wenn keine vorhanden ist.
+  # Bestehende Dateien (z. B. Audit-Berichte) bleiben unangetastet. Die Vorlage
+  # verweist auf GitHubs Private Vulnerability Reporting – das ist ein
+  # serverseitiger Repo-Schalter und wird hier NICHT gesetzt:
+  #   gh api -X PUT repos/<slug>/private-vulnerability-reporting
+  if [ -f "$project_dir/SECURITY.md" ] || [ -f "$project_dir/.github/SECURITY.md" ]; then
+    echo "   • SECURITY.md vorhanden – unangetastet"
+  else
+    run cp "$ROOT_DIR/automation-templates/SECURITY.md" "$project_dir/SECURITY.md"
+    echo "   ✓ SECURITY.md neu angelegt (Private Vulnerability Reporting aktivieren!)"
+  fi
 }
 
 for project in "${PROJECTS[@]}"; do
