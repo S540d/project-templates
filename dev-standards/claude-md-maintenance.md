@@ -124,21 +124,21 @@ zwanghaft unter 300 Zeilen zu drücken, wenn der Überhang aus bewusst dort
 gehaltenem, aktuellem Architekturwissen besteht statt aus Vorfällen oder
 ausgliederbarem Prozesswissen.
 
-## Stand nach Ausrollen (Stand 2026-09-27, siehe Issue #160 für Kommentar-Historie)
+## Stand nach Ausrollen (Stand 2026-10-04, siehe Issue #160 für Kommentar-Historie)
 
 | Projekt | CLAUDE.md-Zeilen | Status |
 |---|---|---|
 | EnergyPriceGermany | 346 (vorher 1055) | 🔶 PR #504 gemergt, liegt real aber wieder über der 300-Schwelle — erneuter Kürzungsdurchlauf nötig |
 | Eisenhauer | 363 (38 KB, vorher 44 KB) | 🔶 PR #466 gemergt, seither wieder über 300 Zeilen gewachsen — erneut prüfen |
-| ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 (bereits unter Schwelle) | ✅ Vorfalls-Erzählung ausgelagert (PR #32) |
+| ELEGOO-Smart-Robot-Car-Kit-V4.0 | 302 | ✅ Vorfalls-Erzählung ausgelagert (PR #32), knapp über Schwelle |
 | Grundlagen_Linguistik | — (hatte keine CLAUDE.md) | ✅ von Anfang an regelkonform angelegt (PR #8, gemergt) |
-| epic_Calendar | 324 (54 KB) | 🔶 Cleanup-PR offen (Epic_Calendar#264) |
-| Boersenspiel | 1458 | 🔶 erster Pass umgesetzt (PR #116) — Vorfälle ausgelagert, bleibt bewusst über 500 Zeilen wegen Architektur-Doku (siehe Klarstellung oben) |
+| epic_Calendar | 324 (54 KB) | 🔶 PR #264 gemergt, liegt real noch über 300 — erneuter Durchlauf nötig |
+| Boersenspiel | ~70 (vorher 1458) | ✅ PR #116 + #117 gemergt (Vorfälle → INCIDENTS.md, Architektur-Doku → `docs/ARCHITECTURE.md`) |
 | Pflanzkalender | 224 (vorher 615) | ✅ umgesetzt (PR #296) |
 | history_line | 713 | ⏳ offen — noch kein Wartungs-Durchlauf gemacht |
-| DrawFromMemory | 542 | ⏳ offen |
-| 1x1_Trainer | 235 (vorher 389) | ✅ umgesetzt (PR #388, gemergt) |
-| safe_my_plants | 377 | ⏳ offen |
+| DrawFromMemory | 300 (vorher 542) | ✅ umgesetzt (PR #344) |
+| 1x1_Trainer | 235 (vorher 389) | ✅ umgesetzt (PR #388) |
+| safe_my_plants | 245 (vorher 377) | 🔶 PR safe-my-plants#186 offen (Android-Build-Ablauf → `docs/ANDROID_BUILD.md`) |
 | CD-to-Spotify-PWA | 212 | ✅ unter 300 |
 | myNotes | 213 | ✅ unter 300 |
 | document_sorter_app | 182 | ✅ unter 300 |
