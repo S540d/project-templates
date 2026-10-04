@@ -4,7 +4,7 @@ name: Reusable CI Quality
 #
 #   jobs:
 #     quality:
-#       uses: S540d/project-templates/.github/workflows/reusable-ci-quality.yml@v1
+#       uses: S540d/project-templates/.github/workflows/reusable-ci-quality.yml@v2
 #       with:
 #         node_version: '20'
 #         run_lint: true

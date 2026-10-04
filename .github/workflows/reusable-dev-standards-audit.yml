@@ -5,7 +5,7 @@ name: Reusable Dev-Standards Audit
 #
 #   jobs:
 #     standards:
-#       uses: S540d/project-templates/.github/workflows/reusable-dev-standards-audit.yml@v1
+#       uses: S540d/project-templates/.github/workflows/reusable-dev-standards-audit.yml@v2
 
 on:
   workflow_call: {}

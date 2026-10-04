@@ -6,7 +6,7 @@ name: Reusable Gitignore Audit
 #
 #   jobs:
 #     gitignore:
-#       uses: S540d/project-templates/.github/workflows/reusable-gitignore-audit.yml@v1
+#       uses: S540d/project-templates/.github/workflows/reusable-gitignore-audit.yml@v2
 
 on:
   workflow_call:
