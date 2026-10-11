@@ -4,6 +4,7 @@ name: Weekly CI Health
 # Folge aus #168: testing war in 3 Repos tagelang rot, ohne dass es auffiel).
 #
 # Je Repo und Branch wird pro Workflow der letzte abgeschlossene Lauf geprüft.
+# Dependabot-Update-Läufe (event=dynamic) zählen nicht mit — die sind kein CI-Signal.
 # Rot (failure/timed_out) → EIN Sammel-Issue in project-templates wird angelegt
 # bzw. aktualisiert; komplett grün → das Issue wird geschlossen.
 #
@@ -30,7 +31,7 @@ jobs:
   ci-health:
     runs-on: ubuntu-latest
     env:
-      DEFAULT_REPOS: 'EnergyPriceGermany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe_my_plants'
+      DEFAULT_REPOS: 'Energy_Price_Germany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe-my-plants,Epic_Calendar'
       BRANCHES: 'testing,main'
       REPOS_INPUT: ${{ github.event.inputs.repos }}
       READ_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN || github.token }}
@@ -54,7 +55,7 @@ jobs:
                     --jq '.workflow_runs
                           | group_by(.workflow_id)
                           | map(max_by(.created_at))
-                          | map(select(.conclusion=="failure" or .conclusion=="timed_out"))
+                          | map(select(.event!="dynamic" and (.conclusion=="failure" or .conclusion=="timed_out")))
                           | .[] | "| \(.name) | \(.conclusion) | \(.created_at[:10]) | [Lauf](\(.html_url)) |"' 2>&1)"; then
                 echo "::warning title=Nicht lesbar::S540d/$repo@$branch ($out)"
                 continue
