@@ -17,6 +17,15 @@
 #     sonst geht pro Major-Bump (vitest 4→5, vite 7→8) ein eigener PR auf.
 #   - open-pull-requests-limit: 5 als Sicherheitsnetz gegen Ausreißer.
 #
+# Gekoppelte Toolchains (Issue #173): Ein einzelner Major im Sammel-PR blockiert
+#   die ganze Gruppe — z. B. typescript 7 vs. typescript-eslint/ts-jest
+#   (peer-Range) → `npm ci` scheitert mit ERESOLVE (CD-to-Spotify-PWA#87/#96,
+#   1x1_Trainer#405); Major-Bumps mit Typfehlern (Pflanzkalender#297).
+#   Default bleibt der Ein-Block. Betrifft ein Repo so einen Fall, im npm-Block
+#   den betroffenen Major repo-lokal aussetzen (Vorlage unten, auskommentiert)
+#   und mit Ablaufdatum/Issue-Verweis kommentieren.
+#   Sammel-PR vor dem Merge IMMER lokal prüfen: `npm ci && npm test`.
+#
 # ACHTUNG: target-branch wirkt nur auf NEUE PRs; bereits offene PRs gegen main
 # bleiben stehen und müssen manuell geschlossen oder gemerged werden.
 # ACHTUNG: GitHubs Default-Security-Updates ignorieren target-branch. Deshalb
@@ -54,3 +63,7 @@ updates:
       npm-all:
         patterns:
           - "*"
+    # Gekoppelte Toolchain? Majors einzelner Pakete repo-lokal aussetzen (#173):
+    # ignore:
+    #   - dependency-name: "typescript"
+    #     update-types: ["version-update:semver-major"]
