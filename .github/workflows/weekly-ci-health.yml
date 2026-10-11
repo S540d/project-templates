@@ -31,7 +31,7 @@ jobs:
   ci-health:
     runs-on: ubuntu-latest
     env:
-      DEFAULT_REPOS: 'Energy_Price_Germany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe-my-plants'
+      DEFAULT_REPOS: 'Energy_Price_Germany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe-my-plants,Epic_Calendar'
       BRANCHES: 'testing,main'
       REPOS_INPUT: ${{ github.event.inputs.repos }}
       READ_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN || github.token }}
