@@ -49,17 +49,27 @@ jobs:
           for raw in "${repos[@]}"; do
             repo="$(echo "$raw" | xargs)"
             [ -n "$repo" ] || continue
+            # Nur aktive Workflows zählen: Läufe gelöschter oder deaktivierter Workflows
+            # (z. B. build-android.yml nach Umstieg auf lokale Builds, #180) bleiben in der
+            # API sichtbar und hielten das Issue sonst dauerhaft rot.
+            if ! active="$(GH_TOKEN="$READ_TOKEN" gh api \
+                  "repos/S540d/$repo/actions/workflows?per_page=100" \
+                  --jq '[.workflows[] | select(.state=="active") | .id]' 2>&1)"; then
+              echo "::warning title=Nicht lesbar::S540d/$repo ($active)"
+              continue
+            fi
             for branch in "${branches[@]}"; do
-              if ! out="$(GH_TOKEN="$READ_TOKEN" gh api \
-                    "repos/S540d/$repo/actions/runs?branch=$branch&status=completed&per_page=50" \
-                    --jq '.workflow_runs
+              if ! runs="$(GH_TOKEN="$READ_TOKEN" gh api \
+                    "repos/S540d/$repo/actions/runs?branch=$branch&status=completed&per_page=50" 2>&1)"; then
+                echo "::warning title=Nicht lesbar::S540d/$repo@$branch ($runs)"
+                continue
+              fi
+              out="$(jq -r --argjson active "$active" '.workflow_runs
+                          | map(select(.workflow_id as $id | any($active[]; . == $id)))
                           | group_by(.workflow_id)
                           | map(max_by(.created_at))
                           | map(select(.event!="dynamic" and (.conclusion=="failure" or .conclusion=="timed_out")))
-                          | .[] | "| \(.name) | \(.conclusion) | \(.created_at[:10]) | [Lauf](\(.html_url)) |"' 2>&1)"; then
-                echo "::warning title=Nicht lesbar::S540d/$repo@$branch ($out)"
-                continue
-              fi
+                          | .[] | "| \(.name) | \(.conclusion) | \(.created_at[:10]) | [Lauf](\(.html_url)) |"' <<< "$runs")"
               [ -n "$out" ] || continue
               {
                 echo "### $repo — \`$branch\`"
