@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN }}
-      DEFAULT_REPOS: 'EnergyPriceGermany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe_my_plants'
+      DEFAULT_REPOS: 'Energy_Price_Germany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe-my-plants'
     steps:
       - name: Token vorhanden?
         shell: bash
