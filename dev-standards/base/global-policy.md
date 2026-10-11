@@ -11,6 +11,7 @@
 - **Vor jedem Push: lokale Tests ausführen** (`npm test` bzw. projektspezifischer Test-Befehl) – kein Push ohne grüne lokale Tests
 - **Kein Merge bei CI-Fail** – Branch Protection erzwingt das technisch; nie mit `--admin` umgehen außer auf explizite Bitte
 - **Zugehöriges Issue beim Merge schließen** (Issue #111): `Closes #X` im PR-Body greift nur beim Merge in den Default-Branch (`main`) — bei PRs nach `testing` also **nie**. Das Issue nach dem Merge manuell schließen (`gh issue close <N> -c "Umgesetzt in #<PR>, gemergt nach \`testing\`."`), sonst bleiben erledigte Issues offen liegen. Ausnahme: Sammel-/Meta-Issues, die ein Teil-PR nur anteilig abarbeitet — die bleiben offen. `Closes #X` trotzdem im PR-Body lassen: es erzeugt die sichtbare Verknüpfung.
+- **Vor dem Start an einem offenen Issue** (Issue #152): prüfen, ob ein Branch/PR `feature/issue-<N>-*` existiert und bereits in `testing` gemergt ist (`gh pr list --state all --search "issue-<N>"`). Offene Checkboxen ≠ offene Arbeit — sonst wird Erledigtes doppelt umgesetzt.
 
 ## [ANDROID BUILD – PFLICHTREGELN]
 
