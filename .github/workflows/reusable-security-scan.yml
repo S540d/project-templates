@@ -4,7 +4,7 @@ name: Reusable Security Scan
 #
 #   jobs:
 #     security:
-#       uses: S540d/project-templates/.github/workflows/reusable-security-scan.yml@v1
+#       uses: S540d/project-templates/.github/workflows/reusable-security-scan.yml@v2
 #
 # WICHTIG: immer auf ein getaggtes Release (@v1) pinnen, nie @main (Issue #7, Punkt 1).
 

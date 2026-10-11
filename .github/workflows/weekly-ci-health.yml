@@ -1,0 +1,99 @@
+name: Weekly CI Health
+
+# Wöchentlicher Report gegen unbemerkt rote CI auf testing/main (Issue #178,
+# Folge aus #168: testing war in 3 Repos tagelang rot, ohne dass es auffiel).
+#
+# Je Repo und Branch wird pro Workflow der letzte abgeschlossene Lauf geprüft.
+# Rot (failure/timed_out) → EIN Sammel-Issue in project-templates wird angelegt
+# bzw. aktualisiert; komplett grün → das Issue wird geschlossen.
+#
+# Token: lesen funktioniert für öffentliche Repos mit dem Default-Token. Private
+# Repos (z. B. CD-to-Spotify-PWA) brauchen ORG_AUTOMATION_TOKEN (read-only auf
+# Actions genügt, siehe weekly-audit.yml); ohne Token werden sie übersprungen.
+
+on:
+  schedule:
+    - cron: '30 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Komma-separierte Repos (leer = Default-Liste)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ci-health:
+    runs-on: ubuntu-latest
+    env:
+      DEFAULT_REPOS: 'EnergyPriceGermany,CD-to-Spotify-PWA,1x1_Trainer,DrawFromMemory,Eisenhauer,Pflanzkalender,safe_my_plants'
+      BRANCHES: 'testing,main'
+      REPOS_INPUT: ${{ github.event.inputs.repos }}
+      READ_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN || github.token }}
+      ISSUE_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: 'CI-Health: rote CI auf testing/main'
+    steps:
+      - name: Rote Läufe sammeln
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPOS="${REPOS_INPUT:-$DEFAULT_REPOS}"
+          : > report.md
+          IFS=',' read -r -a repos <<< "$REPOS"
+          IFS=',' read -r -a branches <<< "$BRANCHES"
+          for raw in "${repos[@]}"; do
+            repo="$(echo "$raw" | xargs)"
+            [ -n "$repo" ] || continue
+            for branch in "${branches[@]}"; do
+              if ! out="$(GH_TOKEN="$READ_TOKEN" gh api \
+                    "repos/S540d/$repo/actions/runs?branch=$branch&status=completed&per_page=50" \
+                    --jq '.workflow_runs
+                          | group_by(.workflow_id)
+                          | map(max_by(.created_at))
+                          | map(select(.conclusion=="failure" or .conclusion=="timed_out"))
+                          | .[] | "| \(.name) | \(.conclusion) | \(.created_at[:10]) | [Lauf](\(.html_url)) |"' 2>&1)"; then
+                echo "::warning title=Nicht lesbar::S540d/$repo@$branch ($out)"
+                continue
+              fi
+              [ -n "$out" ] || continue
+              {
+                echo "### $repo — \`$branch\`"
+                echo
+                echo "| Workflow | Ergebnis | Datum | Link |"
+                echo "|---|---|---|---|"
+                echo "$out"
+                echo
+              } >> report.md
+            done
+          done
+          if [ -s report.md ]; then echo "RED=true" >> "$GITHUB_ENV"; else echo "RED=false" >> "$GITHUB_ENV"; fi
+          cat report.md
+
+      - name: Sammel-Issue pflegen
+        shell: bash
+        env:
+          GH_TOKEN: ${{ env.ISSUE_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" \
+                        --json number,title --jq "map(select(.title==\"$ISSUE_TITLE\")) | .[0].number // empty")"
+          if [ "$RED" = "true" ]; then
+            {
+              echo "Automatisch erzeugt von \`weekly-ci-health.yml\` (Issue #178). Letzter abgeschlossener Lauf je Workflow ist rot:"
+              echo
+              cat report.md
+              echo "Das Issue schließt sich beim nächsten komplett grünen Lauf automatisch."
+            } > body.md
+            if [ -n "$existing" ]; then
+              gh issue edit "$existing" --body-file body.md
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file body.md
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Alle geprüften Workflows auf testing/main wieder grün."
+          fi
