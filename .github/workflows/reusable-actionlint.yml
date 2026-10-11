@@ -45,7 +45,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest
+          # Gepinnte Version + Download-Skript vom selben Tag (kein "main"/"latest").
+          # Erst in eine Datei laden: bei `bash <(curl …)` läuft bash auf leerer
+          # Eingabe erfolgreich durch, wenn curl scheitert (Issue #146).
+          ACTIONLINT_VERSION="1.7.7"
+          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors \
+            -o download-actionlint.bash \
+            "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash"
+          bash download-actionlint.bash "${ACTIONLINT_VERSION}"
+
+          # Infrastruktur-Fehler ist kein Lint-Fund — eigene Meldung, immer hart.
+          if [ ! -x ./actionlint ]; then
+            echo "::error::actionlint-Binary fehlt nach dem Download (Infrastruktur-Fehler, kein Lint-Fund)."
+            exit 1
+          fi
 
           if ./actionlint -color; then
             echo "actionlint: keine Funde."
