@@ -13,18 +13,25 @@
 #     (PR-Review + Status-Checks) nicht direkt mergebar. MUSS in jedem Repo
 #     stehen, sonst landen die PRs auf dem Default-Branch main.
 #   - interval: "monthly" statt weekly — ein Schwung pro Monat.
-#   - EIN Gruppen-Block ohne update-types-Filter: bündelt auch Major-Updates,
-#     sonst geht pro Major-Bump (vitest 4→5, vite 7→8) ein eigener PR auf.
+#   - npm: ZWEI Gruppen (vorher ein Block inkl. Major aus #144):
+#       npm-minor-patch – Minor/Patch, sollte i. d. R. direkt mergebar sein
+#       npm-major       – alle Majors gesammelt, wird einzeln geprüft
+#     Grund: Ein einziger inkompatibler Major (typescript 7 vs.
+#     typescript-eslint-peer → ERESOLVE; Expo-SDK-Sprung) machte den alten
+#     Ein-Block-PR jeden Monat unmergebar, die gefahrlosen Updates blieben
+#     mit liegen (Energy_Price_Germany#543, DrawFromMemory#389).
+#     Höchstens zwei PRs pro Monat statt einem je Major-Bump.
+#   - github-actions: weiter EIN Block inkl. Major (Action-Majors sind selten
+#     breaking und kommen nicht gekoppelt).
 #   - open-pull-requests-limit: 5 als Sicherheitsnetz gegen Ausreißer.
 #
-# Gekoppelte Toolchains (Issue #173): Ein einzelner Major im Sammel-PR blockiert
-#   die ganze Gruppe — z. B. typescript 7 vs. typescript-eslint/ts-jest
-#   (peer-Range) → `npm ci` scheitert mit ERESOLVE (CD-to-Spotify-PWA#87/#96,
-#   1x1_Trainer#405); Major-Bumps mit Typfehlern (Pflanzkalender#297).
-#   Default bleibt der Ein-Block. Betrifft ein Repo so einen Fall, im npm-Block
-#   den betroffenen Major repo-lokal aussetzen (Vorlage unten, auskommentiert)
-#   und mit Ablaufdatum/Issue-Verweis kommentieren.
-#   Sammel-PR vor dem Merge IMMER lokal prüfen: `npm ci && npm test`.
+# Expo-/React-Native-Projekte: NICHT diese Datei, sondern dependabot.expo.yml
+#   nehmen (gleiche Gruppen + ignore für SDK-gebundene Pakete).
+#
+# Gekoppelte Toolchains (Issue #173): Blockiert ein Major dauerhaft die
+#   npm-major-Gruppe, ihn repo-lokal per ignore aussetzen (Vorlage unten,
+#   auskommentiert) und mit Ablaufdatum/Issue-Verweis kommentieren.
+#   Sammel-PRs vor dem Merge IMMER lokal prüfen: `npm ci && npm test`.
 #
 # ACHTUNG: target-branch wirkt nur auf NEUE PRs; bereits offene PRs gegen main
 # bleiben stehen und müssen manuell geschlossen oder gemerged werden.
@@ -58,9 +65,14 @@ updates:
     commit-message:
       prefix: "chore"
     groups:
-      # Ein PR für alles — inklusive Major. Breaking Changes stehen damit
-      # gesammelt im PR-Body und werden dort geprüft, nicht pro Paket.
-      npm-all:
+      # Minor/Patch gesammelt – blockiert nicht mehr durch einen einzelnen Major.
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+        patterns:
+          - "*"
+      # Majors gesammelt – Breaking Changes stehen im PR-Body, dort prüfen.
+      npm-major:
+        update-types: ["major"]
         patterns:
           - "*"
     # Gekoppelte Toolchain? Majors einzelner Pakete repo-lokal aussetzen (#173):
