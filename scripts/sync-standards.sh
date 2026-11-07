@@ -175,8 +175,14 @@ copy_to_project() {
     echo "     (Drosselung nachziehen: scripts/patch-dependabot-throttle.sh)"
   else
     run mkdir -p "$project_dir/.github"
-    run cp "$ROOT_DIR/automation-templates/dependabot.yml" "$project_dir/.github/dependabot.yml"
-    echo "   ✓ .github/dependabot.yml neu angelegt"
+    # Expo-/RN-Projekte bekommen die Variante mit ignore für SDK-gebundene
+    # Pakete (Energy_Price_Germany#543, DrawFromMemory#389).
+    dependabot_tpl="dependabot.yml"
+    if [ -f "$project_dir/package.json" ] && grep -q '"expo"[[:space:]]*:' "$project_dir/package.json"; then
+      dependabot_tpl="dependabot.expo.yml"
+    fi
+    run cp "$ROOT_DIR/automation-templates/$dependabot_tpl" "$project_dir/.github/dependabot.yml"
+    echo "   ✓ .github/dependabot.yml neu angelegt (Vorlage: $dependabot_tpl)"
     # Vorlage passt nicht uniform: Oekosystem (npm/pip/keins) und die Existenz
     # eines testing-Branches muessen geprueft werden. Ein target-branch auf
     # einen fehlenden Branch legt Dependabot komplett stumm (Issue #144).

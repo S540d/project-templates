@@ -12,8 +12,11 @@
 #        gehen PRs gegen den Default-Branch main und sind wegen der
 #        Ruleset-Pflicht nicht direkt mergebar.
 #     2. interval: weekly → monthly
-#     3. groups: EIN Sammel-Block mit patterns ["*"] statt eines
-#        update-types-Filters, damit auch Major-Updates gebündelt werden.
+#     3. groups: github-actions → EIN Sammel-Block inkl. Major;
+#        npm/pip … → zwei Gruppen <eco>-minor-patch + <eco>-major
+#        (Energy_Price_Germany#543). Ein vorhandener ignore-Block bleibt erhalten.
+#        Der Expo-ignore-Block (automation-templates/dependabot.expo.yml) wird
+#        NICHT ergänzt – den bei Bedarf von Hand übernehmen.
 #
 # Der Parser arbeitet blockweise über die "- package-ecosystem"-Einträge und
 # ist idempotent: mehrfaches Ausführen ändert nichts mehr.
@@ -116,37 +119,68 @@ while i < n:
         block = tmp
         changes.append(f"{eco}: target-branch: testing ergänzt")
 
-    # 3. groups durch einen Sammel-Block ersetzen (bzw. anlegen).
-    #    Alles ab "groups:" bis zum Blockende gehört zur alten Gruppendefinition.
+    # 3. groups auf den Soll-Stand bringen (bzw. anlegen).
+    #    github-actions: EIN Sammel-Block inkl. Major.
+    #    Paket-Ökosysteme (npm, pip …): ZWEI Gruppen minor-patch + major, damit
+    #    ein inkompatibler Major nicht die gefahrlosen Updates blockiert
+    #    (Energy_Price_Germany#543, DrawFromMemory#389).
+    #    Der groups-Abschnitt endet an der nächsten Zeile auf Feld-Ebene
+    #    (z. B. "ignore:" oder ein Kommentar davor) — nicht am Blockende, sonst
+    #    würde ein nachfolgender ignore-Block mit gelöscht.
     gidx = next((k for k, b in enumerate(block) if re.match(r'^\s*groups:', b)), None)
-    group_name = "actions-all" if eco == "github-actions" else f"{eco}-all"
-    desired = [
-        f"{field_indent}groups:",
-        f"{field_indent}  # Kein update-types-Filter → Major landet mit im Sammel-PR.",
-        f"{field_indent}  {group_name}:",
-        f"{field_indent}    patterns:",
-        f'{field_indent}      - {Q}*{Q}',
-    ]
+    if eco == "github-actions":
+        desired = [
+            f"{field_indent}groups:",
+            f"{field_indent}  # Kein update-types-Filter → Major landet mit im Sammel-PR.",
+            f"{field_indent}  actions-all:",
+            f"{field_indent}    patterns:",
+            f'{field_indent}      - {Q}*{Q}',
+        ]
+    else:
+        desired = [
+            f"{field_indent}groups:",
+            f"{field_indent}  # Minor/Patch gesammelt – blockiert nicht mehr durch einen einzelnen Major.",
+            f"{field_indent}  {eco}-minor-patch:",
+            f"{field_indent}    update-types: [{Q}minor{Q}, {Q}patch{Q}]",
+            f"{field_indent}    patterns:",
+            f'{field_indent}      - {Q}*{Q}',
+            f"{field_indent}  # Majors gesammelt – Breaking Changes stehen im PR-Body, dort prüfen.",
+            f"{field_indent}  {eco}-major:",
+            f"{field_indent}    update-types: [{Q}major{Q}]",
+            f"{field_indent}    patterns:",
+            f'{field_indent}      - {Q}*{Q}',
+        ]
     if gidx is None:
         while block and not block[-1].strip():
             block.pop()
         block.extend(desired)
-        changes.append(f"{eco}: groups-Sammelblock angelegt")
+        changes.append(f"{eco}: groups-Block angelegt")
     else:
+        gend = gidx + 1
+        while gend < len(block):
+            b = block[gend]
+            if b.strip() and indent_of(b) <= len(field_indent):
+                break
+            gend += 1
+        # Leerzeilen am Abschnittsende gehören zum Rest, nicht zu groups.
+        while gend > gidx + 1 and not block[gend - 1].strip():
+            gend -= 1
         def strip_comments(ls):
             return [x.rstrip() for x in ls
                     if x.strip() and not x.strip().startswith("#")]
-        if strip_comments(block[gidx:]) != strip_comments(desired):
+        if strip_comments(block[gidx:gend]) != strip_comments(desired):
             # Direkt vorstehende Kommentarzeilen beschreiben die alte
             # Gruppierung ("Patch-/Minor-Updates gebündelt") und wären nach
             # dem Ersetzen falsch — mit abräumen.
             start = gidx
             while start > 0 and block[start - 1].strip().startswith("#"):
                 start -= 1
-            block = block[:start] + desired
-            changes.append(f"{eco}: groups → Sammelblock inkl. Major")
-        # sonst: bereits ein patterns-Block ohne update-types → idempotent, nichts tun
+            block = block[:start] + desired + block[gend:]
+            changes.append(f"{eco}: groups → Soll-Stand")
+        # sonst: bereits Soll-Stand → idempotent, nichts tun
 
+    while block and not block[-1].strip():
+        block.pop()
     out.extend(block)
     # Leerzeile zwischen den Ecosystem-Blöcken erhalten (das Einsammeln oben
     # zieht trailing blanks in den Block, die desired-Liste ersetzt sie).
