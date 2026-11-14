@@ -13,25 +13,28 @@
 #     (PR-Review + Status-Checks) nicht direkt mergebar. MUSS in jedem Repo
 #     stehen, sonst landen die PRs auf dem Default-Branch main.
 #   - interval: "monthly" statt weekly — ein Schwung pro Monat.
-#   - npm: ZWEI Gruppen (vorher ein Block inkl. Major aus #144):
-#       npm-minor-patch – Minor/Patch, sollte i. d. R. direkt mergebar sein
-#       npm-major       – alle Majors gesammelt, wird einzeln geprüft
-#     Grund: Ein einziger inkompatibler Major (typescript 7 vs.
-#     typescript-eslint-peer → ERESOLVE; Expo-SDK-Sprung) machte den alten
-#     Ein-Block-PR jeden Monat unmergebar, die gefahrlosen Updates blieben
-#     mit liegen (Energy_Price_Germany#543, DrawFromMemory#389).
-#     Höchstens zwei PRs pro Monat statt einem je Major-Bump.
+#   - npm: EINE Gruppe npm-minor-patch (Minor/Patch), sollte i. d. R. direkt
+#     mergebar sein. **Majors kommen NICHT über Dependabot** (ignore unten).
+#     Geschichte: erst ein Block inkl. Major (#144), dann zwei Gruppen
+#     minor-patch + major (#187). Die Major-Gruppe war praktisch nie mergebar:
+#     Sie bündelt Breaking Changes aus unabhängigen Toolchains (Sentry, ESLint,
+#     Jest, TypeScript, Babel …); einer ist immer rot, der PR wird geschlossen
+#     und im Folgemonat neu erzeugt (z. B. DrawFromMemory#400).
+#     Majors brauchen eine geplante Migration → monatlicher Major-Report
+#     (project-templates/.github/workflows/monthly-major-report.yml) listet
+#     verfügbare Majors in EINEM Sammel-Issue; daraus entstehen gezielte
+#     Upgrade-Issues je Repo.
 #   - github-actions: weiter EIN Block inkl. Major (Action-Majors sind selten
 #     breaking und kommen nicht gekoppelt).
 #   - open-pull-requests-limit: 5 als Sicherheitsnetz gegen Ausreißer.
 #
-# Expo-/React-Native-Projekte: NICHT diese Datei, sondern dependabot.expo.yml
-#   nehmen (gleiche Gruppen + ignore für SDK-gebundene Pakete).
+# Security-Updates sind vom ignore NICHT betroffen (siehe dependabot.expo.yml),
+#   landen aber gegen main → per Mini-PR nach testing ersetzen (#185).
 #
-# Gekoppelte Toolchains (Issue #173): Blockiert ein Major dauerhaft die
-#   npm-major-Gruppe, ihn repo-lokal per ignore aussetzen (Vorlage unten,
-#   auskommentiert) und mit Ablaufdatum/Issue-Verweis kommentieren.
-#   Sammel-PRs vor dem Merge IMMER lokal prüfen: `npm ci && npm test`.
+# Expo-/React-Native-Projekte: NICHT diese Datei, sondern dependabot.expo.yml
+#   nehmen (zusätzlich ignore für SDK-gebundene Pakete).
+#
+# Sammel-PRs vor dem Merge IMMER lokal prüfen: `npm ci && npm test`.
 #
 # ACHTUNG: target-branch wirkt nur auf NEUE PRs; bereits offene PRs gegen main
 # bleiben stehen und müssen manuell geschlossen oder gemerged werden.
@@ -65,17 +68,13 @@ updates:
     commit-message:
       prefix: "chore"
     groups:
-      # Minor/Patch gesammelt – blockiert nicht mehr durch einen einzelnen Major.
+      # Minor/Patch gesammelt – ein PR pro Monat.
       npm-minor-patch:
         update-types: ["minor", "patch"]
         patterns:
           - "*"
-      # Majors gesammelt – Breaking Changes stehen im PR-Body, dort prüfen.
-      npm-major:
-        update-types: ["major"]
-        patterns:
-          - "*"
-    # Gekoppelte Toolchain? Majors einzelner Pakete repo-lokal aussetzen (#173):
-    # ignore:
-    #   - dependency-name: "typescript"
-    #     update-types: ["version-update:semver-major"]
+    ignore:
+      # Majors nie über Dependabot – geplant über den Major-Report (s. o.).
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # ── Repo-spezifisch (mit Begründung + Issue) ────────────────────────
