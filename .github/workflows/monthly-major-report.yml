@@ -1,0 +1,83 @@
+name: Monthly Major Report
+
+# Monatlicher Überblick über verfügbare Major-Updates aller App-Repos.
+# Gegenstück zur Dependabot-Regel „keine Majors über Dependabot“
+# (automation-templates/README.md): Majors kommen nicht mehr als nie
+# mergebare Sammel-PRs, sondern werden hier sichtbar und dann gezielt als
+# Upgrade-Issue im jeweiligen Repo geplant. Expo-Repos: SDK-Stand je Repo.
+#
+# Ergebnis: EIN Sammel-Issue in project-templates, wird jeden Monat
+# überschrieben; ohne Treffer wird es geschlossen.
+# Läuft am 2. des Monats, nach dem monatlichen Dependabot-Lauf.
+#
+# Token: öffentliche Repos gehen mit dem Default-Token. Private Repos
+# (CD-to-Spotify-PWA) brauchen ORG_AUTOMATION_TOKEN, sonst übersprungen.
+
+on:
+  schedule:
+    - cron: '0 7 2 * *'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Komma-separierte Repos (leer = Default-Liste im Skript)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  major-report:
+    runs-on: ubuntu-latest
+    env:
+      REPOS_INPUT: ${{ github.event.inputs.repos }}
+      READ_TOKEN: ${{ secrets.ORG_AUTOMATION_TOKEN || github.token }}
+      ISSUE_TITLE: 'Major-Report: verfügbare Major-Updates'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Report erzeugen
+        shell: bash
+        env:
+          GH_TOKEN: ${{ env.READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          bash scripts/major-report.sh "${REPOS_INPUT}" > report.md 2> report.err
+          cat report.err
+          total="$(sed -n 's/^MAJOR_TOTAL=//p' report.err)"
+          echo "TOTAL=${total:-0}" >> "$GITHUB_ENV"
+          cat report.md
+
+      - name: Sammel-Issue pflegen
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list --state all --search "\"$ISSUE_TITLE\" in:title" \
+                        --json number,title,state --jq "map(select(.title==\"$ISSUE_TITLE\")) | .[0] // empty")"
+          [ -n "$existing" ] || existing='{}'
+          number="$(jq -r '.number // empty' <<< "$existing")"
+          state="$(jq -r '.state // empty' <<< "$existing")"
+          if [ -s report.md ]; then
+            {
+              echo "Automatisch erzeugt von \`monthly-major-report.yml\` am $(date -u +%F). Stand: Branch \`testing\` (sonst \`main\`)."
+              echo
+              echo "Majors kommen nicht über Dependabot (siehe \`automation-templates/README.md\`). Für ein Upgrade ein Issue im jeweiligen Repo anlegen und hier verlinken."
+              echo
+              echo "**$TOTAL Majors außerhalb der Expo-SDKs.**"
+              echo
+              cat report.md
+            } > body.md
+            if [ -n "$number" ]; then
+              gh issue edit "$number" --body-file body.md
+              [ "$state" = "CLOSED" ] && gh issue reopen "$number"
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file body.md
+            fi
+          elif [ -n "$number" ] && [ "$state" = "OPEN" ]; then
+            gh issue close "$number" --comment "Keine Major-Updates offen."
+          fi

@@ -17,10 +17,18 @@ Zwei Vorlagen:
 | `dependabot.yml` | alle Repos ohne Expo |
 | `dependabot.expo.yml` | Expo-/React-Native-Projekte (`sync-standards.sh` wählt sie automatisch, wenn `package.json` `expo` enthält) |
 
-**Gruppen (npm):** `npm-minor-patch` (Minor/Patch) und `npm-major` (alle Majors). Früher gab es einen einzigen Block inkl. Major (#144). Ein einziger inkompatibler Major machte den PR dann jeden Monat unmergebar, die gefahrlosen Updates blieben mit liegen (Energy_Price_Germany#543, DrawFromMemory#389). Jetzt sind es höchstens zwei PRs pro Monat, der Minor/Patch-PR ist in der Regel direkt mergebar.
+**Gruppe (npm):** nur noch `npm-minor-patch`, ein PR pro Monat, in der Regel direkt mergebar. **Majors kommen nicht mehr über Dependabot** (`ignore` für `*` mit `semver-major`).
 
-**Expo-Variante:** zusätzlich `ignore` für SDK-gebundene Pakete. Für `expo`, `expo-*`, `@expo/*` werden Majors ignoriert, für `react`, `react-native`, `react-native-*` und weitere native Module auch Minors. Patches laufen weiter. Diese Pakete werden nur bei einem geplanten SDK-Upgrade angehoben (`npx expo install --fix`, Gerätetest, eigenes Issue). Security-Updates sind vom `ignore` nicht betroffen: `update-types` wirkt laut GitHub-Doku nur auf Version-Updates.
+Geschichte: Erst gab es einen Block inklusive Majors (#144). Ein einziger inkompatibler Major machte ihn jeden Monat unmergebar (Energy_Price_Germany#543, DrawFromMemory#389). Dann kamen zwei Gruppen, Minor/Patch und Major (#187). Die Major-Gruppe war aber genauso nie mergebar, weil sie Breaking Changes aus unabhängigen Toolchains bündelt (Sentry, ESLint, Jest, TypeScript, Babel …): DrawFromMemory#400. Majors brauchen eine geplante Migration. Deshalb listet der **monatliche Major-Report** (`.github/workflows/monthly-major-report.yml`) die verfügbaren Majors aller App-Repos in einem Sammel-Issue. Daraus entstehen gezielte Upgrade-Issues je Repo.
 
-**Prüfen vor dem Merge:** `gh pr checkout <N> && npm ci && npm test`. Blockiert ein Major dauerhaft die `npm-major`-Gruppe (z. B. `typescript` 7 vs. `typescript-eslint`-peer → ERESOLVE, Issue #173), ihn repo-lokal per `ignore` + `update-types: ["version-update:semver-major"]` aussetzen, mit Begründung und Issue-Verweis kommentieren und nach dem Toolchain-Update wieder entfernen.
+**Expo-Variante:** Zusätzlich bekommen SDK-gebundene Pakete **gar keine** Dependabot-Updates (`expo`, `expo-*`, `@expo/*`, `react`, `react-dom`, `react-test-renderer`, `@types/react`, `react-native`, `react-native-*` und weitere native Module). Auch Patches sind nicht harmlos: Expo pinnt in `bundledNativeModules.json` exakt. `react` 19.2.0 → 19.2.9 ohne `react-test-renderer` ließ in DrawFromMemory#399 alle Testsuites scheitern. Diese Pakete bewegt nur Expo selbst:
+- innerhalb des SDK: `npx expo install --check`, dann gezielt `npx expo install <pakete>` (kein pauschales `--fix`, das schlägt auch Tooling-Majors vor)
+- SDK-Upgrade: `npx expo install expo@^<N> && npx expo install --fix`, mit Gerätetest, als eigenes Issue
 
-**Bestehende Configs nachziehen:** `scripts/patch-dependabot-throttle.sh [--dry-run] <repo>` stellt die Gruppen um und lässt einen vorhandenen `ignore`-Block stehen. Den Expo-`ignore`-Block ergänzt das Skript nicht.
+Der Major-Report zeigt dazu je Repo den SDK-Stand.
+
+**Security-Updates** sind vom `ignore` nicht betroffen: Mit gesetztem `target-branch` gilt die Konfiguration laut GitHub-Doku nicht für Security-PRs. Sie landen deshalb weiter gegen `main` und werden per Mini-PR nach `testing` ersetzt (#185).
+
+**Prüfen vor dem Merge:** `gh pr checkout <N> && npm ci && npm test`. Bei 0.x-Paketen zählt Dependabot 0.13 → 0.22 als „minor“, das ist oft breaking.
+
+**Bestehende Configs nachziehen:** `scripts/patch-dependabot-throttle.sh` stammt aus #144 und kennt die neue Regel noch nicht. Für den Rollout wird die Datei je Repo aus der passenden Vorlage neu übernommen, repo-spezifische `ignore`-Einträge werden von Hand mitgenommen.
