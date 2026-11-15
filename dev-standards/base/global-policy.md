@@ -43,3 +43,9 @@
 ## [CI – CACHE-CLEANUP]
 
 - **Cache-Cleanup-Workflow** (`.github/workflows/cache-cleanup.yml`) in jedem Repo mit GitHub-Actions-Caches: löscht wöchentlich (So 03:00 UTC) bzw. on-demand alle Action-Caches älter als der jeweils letzte Lauf. GitHub-Limit ist 10 GB pro Repo – ohne Cleanup laufen Build-Caches (node_modules, Gradle, Expo) voll und verdrängen frische Einträge. Vorlage: `cache-cleanup.yml` in project-templates.
+
+## [COMMUNITY-STANDARDS]
+
+- **Einheitliche Community-Dateien** (Issue #196): `CODE_OF_CONDUCT.md` und `CONTRIBUTING.md` liegen **zentral** in `S540d/.github` und gelten für alle Repos ohne eigene Datei — keine projekteigenen Kopien anlegen. `SECURITY.md` (Vorlage `automation-templates/SECURITY.md`) und `LICENSE` liegen je Repo. Lizenz-Standard ist **PolyForm Noncommercial 1.0.0** (`package.json`: `PolyForm-Noncommercial-1.0.0`); Drittinhalte mit eigener Lizenz separat ausweisen.
+- **Keine Issue-/PR-Templates** (`.github/ISSUE_TEMPLATE/`, `PULL_REQUEST_TEMPLATE*`): werden nicht genutzt und nicht angelegt. Checklisten gehören nach `docs/`, nicht nach `.github/ISSUE_TEMPLATE/`.
+- **Repo-Description** (GitHub-Einstellung) ist gesetzt und enthält **nur funktionale Hinweise für Anwender** (eine Zeile, kein Tech-Stack, keine Setup-/Clone-Hinweise).
