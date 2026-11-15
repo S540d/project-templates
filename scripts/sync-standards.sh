@@ -167,12 +167,12 @@ copy_to_project() {
   # ein serverseitiger Repo-Schalter und werden hier NICHT gesetzt:
   #   gh api -X PUT repos/<slug>/vulnerability-alerts
   #   gh api -X PUT repos/<slug>/automated-security-fixes
-  # Aenderungen an der VORLAGE erreichen bestehende Configs hier bewusst nicht.
-  # Zum gezielten Nachziehen der Drosselungs-Felder (Issue #144):
-  #   ./scripts/patch-dependabot-throttle.sh [--dry-run] "$project_dir"
+  # Aenderungen an der VORLAGE erreichen bestehende Configs hier bewusst nicht;
+  # sie werden je Repo von Hand aus der Vorlage uebernommen (siehe
+  # automation-templates/README.md).
   if [ -f "$project_dir/.github/dependabot.yml" ]; then
     echo "   • .github/dependabot.yml vorhanden – unangetastet"
-    echo "     (Drosselung nachziehen: scripts/patch-dependabot-throttle.sh)"
+    echo "     (Vorlage ggf. von Hand uebernehmen: automation-templates/README.md)"
   else
     run mkdir -p "$project_dir/.github"
     # Expo-/RN-Projekte bekommen die Variante mit ignore für SDK-gebundene
