@@ -31,4 +31,4 @@ Der Major-Report zeigt dazu je Repo den SDK-Stand.
 
 **Prüfen vor dem Merge:** `gh pr checkout <N> && npm ci && npm test`. Bei 0.x-Paketen zählt Dependabot 0.13 → 0.22 als „minor“, das ist oft breaking.
 
-**Bestehende Configs nachziehen:** `scripts/patch-dependabot-throttle.sh` stammt aus #144 und kennt die neue Regel noch nicht. Für den Rollout wird die Datei je Repo aus der passenden Vorlage neu übernommen, repo-spezifische `ignore`-Einträge werden von Hand mitgenommen.
+**Bestehende Configs nachziehen:** Die Datei wird je Repo aus der passenden Vorlage neu übernommen, repo-spezifische `ignore`-Einträge werden von Hand mitgenommen. (Das frühere Patch-Skript aus #144 ist entfernt, es erzeugte Major-Gruppen, die die neue Regel nicht mehr vorsieht.)
